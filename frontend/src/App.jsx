@@ -1,14 +1,27 @@
-import React from 'react'
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import LoadingPage from "./pages/LoadingPage";
+import Home from "./pages/Home";  // create this page
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import AdminPage from "./pages/AdminPage";
+import StaffDashboard from "./pages/StaffDashboard";
+import CateringAdmin from "./pages/CateringAdmin";
+import CustomerDashboard from "./pages/CustomerDashboard";
 
 const App = () => {
   return (
-    <div>
-     <button className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
-  Click Me
-</button>
+    <Routes>
+      <Route path="/" element={<LoadingPage />} />
+      <Route path="/home" element={<Home />} />
+      <Route path="/login" element={<Login/>}/>
+      <Route path="/register" element={<Register/>}/>
+      <Route path="/admin" element={<AdminPage/>}/>
+      <Route path="/catering" element={<CateringAdmin/>}/>
+      <Route path="/staff" element={<StaffDashboard/>}/>
+      <Route path="/customer" element={<CustomerDashboard/>}/>
+    </Routes>
+  );
+};
 
-    </div>
-  )
-}
-
-export default App
+export default App;
