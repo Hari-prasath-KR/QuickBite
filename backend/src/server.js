@@ -2,8 +2,17 @@ import express from 'express'
 import dotenv from "dotenv";
 import {connectDB} from "./config/db.js"
 import authRoutes from "./routes/authRoutes.js";
+import cateringRoutes from "./routes/cateringRoutes.js"
+import adminRoutes from './routes/adminRoutes.js'
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
+import branchRoutes from "./routes/branchRoutes.js";
+import menuItemRoutes from "./routes/menuItemRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js"
+import userRoutes from "./routes/userRoutes.js";
 import cors from "cors"
-
+import cookieParser from "cookie-parser"
+import { requireAuth } from './middleware/auth.js';
 dotenv.config();
 
 const PORT=process.env.PORT||5001
@@ -12,18 +21,32 @@ connectDB(process.env.MONGO_URI_COMPASS)
 
 const app=express();
 
-app.use(cors());
+app.use(cookieParser())
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
+
 app.use(express.json());
 
 app.use("/api/auth",authRoutes);
+app.use("/api/caterings",cateringRoutes);
+app.use("/api/admin",adminRoutes);
+app.use("/api/admin/analytics",analyticsRoutes);
+app.use("/api/admin/feedback", feedbackRoutes);
+app.use("/api/branch", branchRoutes);
+app.use("/api/menuitem", menuItemRoutes);
+app.use("/api/order", orderRoutes);
+app.use("/api/users", userRoutes);
+app.get("/api/profile", (req, res) => {
+  res.json({ msg: "Protected route", user: req.user });
+});
 
 app.get('/api/test', (req, res) => {
   res.json({ message: 'API is working!' });
 });
 
 app.listen(PORT,() => console.log("Server Listening to port:",PORT));
-
-
 
 
 // connectDB().then(()=>{

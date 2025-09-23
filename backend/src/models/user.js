@@ -16,6 +16,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  logo:{
+        type:String
+  },
   role: {
     type: String,
     enum: ["customer", "staff", "cateringAdmin", "collegeAdmin"],
@@ -32,6 +35,11 @@ const userSchema = new mongoose.Schema({
     default: null,
   }
 }, { timestamps: true });
+
+userSchema.index(
+   {role:1,cateringId:1},
+   {unique:true,partialFilterExpression:{role:"cateringAdmin"}}
+);
 
 const User = mongoose.model("User", userSchema);
 export default User;

@@ -14,11 +14,13 @@ const Login = () => {
       const res = await axios.post("http://localhost:5001/api/auth/login", {
         email,
         password,
-      });
+      },
+       { withCredentials: true } 
+    );
       console.log(res.data);
 
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", res.data.role);
+      // localStorage.setItem("token", res.data.token);
+      // localStorage.setItem("role", res.data.role);
 
       if (res.data.role === "admin") navigate("/admin");
       else if (res.data.role === "cateringAdmin") navigate("/catering");
@@ -31,6 +33,13 @@ const Login = () => {
   };
 
   return (
+    <>
+      <div className="navbar bg-green-400 shadow-md px-6 fixed top-0 left-0 w-full z-50">
+          <a className="text-2xl font-extrabold text-white cursor-pointer" onClick={()=>{navigate("/home")}}>
+            QuickBite 🍔
+          </a>
+      </div>
+
     <div className="flex justify-center items-center h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white">
       <form
         onSubmit={handleLogin}
@@ -77,7 +86,7 @@ const Login = () => {
           </span>
         </p>
       </form>
-    </div>
+    </div></>
   );
 };
 

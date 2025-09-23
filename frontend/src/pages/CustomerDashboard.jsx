@@ -1,9 +1,217 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import CustomerNavbar from '../components/CustomerNavbar'
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
+// --- Sub-components for a cleaner structure ---
+
+// Skeleton Loader for a better initial loading experience
+const CateringCardSkeleton = () => (
+  <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center border border-gray-200 animate-pulse">
+    <div className="h-24 w-24 rounded-full bg-gray-200 mb-4"></div>
+    <div className="h-6 w-3/4 rounded bg-gray-200 mb-2"></div>
+    <div className="h-4 w-full rounded bg-gray-200 mb-4"></div>
+    <div className="h-4 w-1/2 rounded bg-gray-200"></div>
+    <div className="mt-6 h-10 w-32 bg-gray-200 rounded-lg"></div>
+  </div>
+);
+
 
 const CustomerDashboard = () => {
+   const [caterings, setCaterings] = useState([]);
+  const [loading, setLoading] = useState(true); // Added loading state
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchCaterings = async () => {
+      try {
+        const res = await axios.get("http://localhost:5001/api/caterings", {
+          withCredentials: true,
+        });
+        setCaterings(res.data);
+      } catch (err) {
+        console.error("Error fetching caterings:", err);
+      } finally {
+        setLoading(false); // Set loading to false after fetch
+      }
+    };
+    fetchCaterings();
+  }, []);
+  
   return (
-    <div>
-      welcome back
+    <div className='min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white'>
+     <div className="fixed top-0 left-0 w-full z-50 shadow-lg">
+        <CustomerNavbar />
+      </div>
+      <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white flex flex-col items-center pt-24 px-6">
+        {/* === HERO SECTION === */}
+        <section className="min-h-screen pt-0 pb-20 px-6 flex items-center">
+          <div className="container mx-auto max-w-6xl grid md:grid-cols-2 items-center gap-12">
+            <div className="text-left">
+              <h1 className="text-5xl md:text-6xl font-extrabold text-green-900 leading-tight">
+                Your College Cravings,
+                <span className="text-yellow-600"> Delivered.</span>
+              </h1>
+              <p className="mt-4 text-lg text-gray-700 max-w-md">
+                Skip the queue. Order delicious meals from your favorite campus
+                caterings and get back to what matters.
+              </p>
+              <div className="mt-8 flex gap-4">
+                <button
+                  onClick={() => document.getElementById('caterings').scrollIntoView({ behavior: 'smooth' })}
+                  className="px-8 py-3 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transform hover:scale-105 transition-all"
+                >
+                  Browse Caterings 👇
+                </button>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/3075/3075977.png" // Suggestion: Use a more dynamic food image
+                alt="Delicious Food"
+                className="w-80 h-80 object-contain drop-shadow-2xl animate-pulse-slow"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* === HOW IT WORKS SECTION === */}
+       <section className="py-8 md:py-8">
+          <div className="container mx-auto max-w-5xl text-center px-4">
+            <h2 className="text-3xl font-bold text-slate-800 mb-4">
+              Order with Ease
+            </h2>
+            <p className="text-slate-700 mb-16 max-w-2xl mx-auto">
+              Getting your favorite meal has never been easier.
+            </p>
+            <div className="grid md:grid-cols-3 gap-8">
+              
+              {/* Step 1 */}
+              <div className="bg-white/50 backdrop-blur-lg rounded-2xl p-8 shadow-lg flex flex-col items-center border border-white/60">
+                <div className="bg-green-100 rounded-full p-4 mb-5 inline-flex">
+                  <span className="text-4xl">📍</span>
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Choose & Customize</h3>
+                <p className="text-slate-600">
+                  Browse menus from all available caterings on campus.
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="bg-white/50 backdrop-blur-lg rounded-2xl p-8 shadow-lg flex flex-col items-center border border-white/60">
+                <div className="bg-green-100 rounded-full p-4 mb-5 inline-flex">
+                  <span className="text-4xl">💳</span>
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Pay Securely Online</h3>
+                <p className="text-slate-600">
+                  Fast and secure payments. No need for cash.
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="bg-white/50 backdrop-blur-lg rounded-2xl p-8 shadow-lg flex flex-col items-center border border-white/60">
+                <div className="bg-green-100 rounded-full p-4 mb-5 inline-flex">
+                  <span className="text-4xl">🍔</span>
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Enjoy Your Meal</h3>
+                <p className="text-slate-600">
+                  We'll notify you when it's ready. Just grab and go!
+                </p>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* === FEATURED CATERINGS SECTION === */}
+        <section id="caterings" className="py-20 px-6">
+          <div className="container mx-auto max-w-6xl text-center">
+            <h2 className="text-3xl font-bold text-gray-800 mb-12">
+              Caterings On Campus
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+              {loading
+                ? // Show skeleton loaders while fetching data
+                  [...Array(3)].map((_, i) => <CateringCardSkeleton key={i} />)
+                : caterings.map((catering) => (
+                    <div
+                      key={catering._id}
+                      className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center border border-gray-200 transition-transform transform hover:scale-105 hover:shadow-2xl cursor-pointer"
+                      onClick={() => navigate(`/catering/${catering._id}`)} // Navigate to specific catering
+                    >
+                      <img
+                        src={catering.logo}
+                        alt={catering.name}
+                        className="h-24 w-24 object-contain mb-4 rounded-full border-2 border-yellow-300"
+                      />
+                      <h3 className="text-2xl font-bold text-gray-800">
+                        {catering.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm mt-2 text-center flex-grow">
+                        {catering.description || "Delicious meals for everyone!"}
+                      </p>
+                      <button className="mt-6 px-6 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-all">
+                        View Menu
+                      </button>
+                    </div>
+                  ))}
+            </div>
+          </div>
+        </section>
+
+        {/* === WHY CHOOSE US SECTION === */}
+        <section className="bg-white rounded-xl shadow-lg p-6 w-full max-w-4xl text-center border border-yellow-300 mb-10">
+            <div className="container mx-auto max-w-5xl text-center">
+                <h2 className="text-3xl font-bold text-gray-800 mb-12">Why You'll Love Our Service</h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="bg-green-100 p-6 rounded-lg">
+                        <div className="text-4xl mb-3">⚡</div>
+                        <h3 className="font-semibold text-lg">Blazing Fast</h3>
+                        <p className="text-gray-600 text-sm">Order in under a minute.</p>
+                    </div>
+                    <div className="bg-yellow-100 p-6 rounded-lg">
+                        <div className="text-4xl mb-3"> 🍱 </div>
+                        <h3 className="font-semibold text-lg">Great Variety</h3>
+                        <p className="text-gray-600 text-sm">All your campus favorites in one place.</p>
+                    </div>
+                    <div className="bg-green-100 p-6 rounded-lg">
+                        <div className="text-4xl mb-3">🔒</div>
+                        <h3 className="font-semibold text-lg">Secure Payments</h3>
+                        <p className="text-gray-600 text-sm">100% secure online payment system.</p>
+                    </div>
+                    <div className="bg-yellow-100 p-6 rounded-lg">
+                        <div className="text-4xl mb-3">⭐</div>
+                        <h3 className="font-semibold text-lg">Real Reviews</h3>
+                        <p className="text-gray-600 text-sm">See real-time ratings from students.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {/* === FINAL CTA SECTION === */}
+       {/*  <section className="py-20 px-6">
+            <div className="container mx-auto max-w-4xl text-center bg-green-800 text-white p-12 rounded-2xl shadow-xl">
+                <h2 className="text-4xl font-extrabold mb-4">Ready to Skip the Queue?</h2>
+                <p className="text-green-100 text-lg mb-8">Create an account and place your first order in minutes.</p>
+                <button
+                  onClick={() => navigate("/register")}
+                  className="px-10 py-4 bg-yellow-500 text-green-900 font-extrabold rounded-lg shadow-md hover:bg-yellow-400 transform hover:scale-105 transition-all text-lg"
+                >
+                  Register Now & Start Ordering 🚀
+                </button>
+            </div>
+        </section> */}
+        {/* === FOOTER === */}
+        {/* <footer className="bg-gray-800 text-white py-8">
+            <div className="container mx-auto max-w-6xl text-center text-sm">
+                <p>&copy; {new Date().getFullYear()} Campus Eats. All Rights Reserved.</p>
+                <div className="mt-4 space-x-6">
+                    <a href="/about" className="hover:text-yellow-400">About Us</a>
+                    <a href="/contact" className="hover:text-yellow-400">Contact</a>
+                    <a href="/privacy" className="hover:text-yellow-400">Privacy Policy</a>
+                </div>
+            </div>
+        </footer> */}
+      </div>
     </div>
   )
 }
