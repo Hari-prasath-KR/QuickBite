@@ -45,7 +45,7 @@ const AdminNavbar = () => {
       {/* Brand Name */}
       <div className="flex-1">
        <a className="text-2xl font-extrabold text-white cursor-pointer" onClick={()=>{navigate("/admin")}}>
-          QuickBite 🏫
+          QuickBites 🏫
         </a>
       </div>
 

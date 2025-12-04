@@ -31,7 +31,7 @@ function CustomerNavbar() {
             </ul>
           </div>
           <a className="text-3xl font-extrabold text-white cursor-pointer ml-4" onClick={()=>{navigate("/customer")}}>
-            QuickBite 🍔
+            QuickBites 🍔
           </a>
         </div>
         <div className="navbar-end">

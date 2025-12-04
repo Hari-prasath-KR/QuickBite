@@ -17,6 +17,10 @@ const cateringschema = new mongoose.Schema({
     ref: "User", // refers to User model
     default: null, // initially no catering admin
   },
+   branches: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch'
+  }],
 }, { timestamps: true });
 
 const Catering = mongoose.model("Catering",cateringschema);

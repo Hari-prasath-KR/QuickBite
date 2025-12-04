@@ -13,6 +13,10 @@ import userRoutes from "./routes/userRoutes.js";
 import cors from "cors"
 import cookieParser from "cookie-parser"
 import { requireAuth } from './middleware/auth.js';
+import staffRoutes from "./routes/staffRoutes.js"
+import branchAnalyticsRoutes from "./routes/branchAnalyticsRoutes.js";
+import cateringAdminRoutes from "./routes/cateringAdminRoutes.js";
+
 dotenv.config();
 
 const PORT=process.env.PORT||5001
@@ -41,10 +45,14 @@ app.use("/api/users", userRoutes);
 app.get("/api/profile", (req, res) => {
   res.json({ msg: "Protected route", user: req.user });
 });
+app.use("/api/staff", staffRoutes);
+app.use("/api/branch-analystics", branchAnalyticsRoutes);
+app.use("/api/catering-admin", cateringAdminRoutes);
+app.use("/api/catering-admin",menuItemRoutes);
 
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'API is working!' });
-});
+// app.get('/api/test', (req, res) => {
+//   res.json({ message: 'API is working!' });
+// });
 
 app.listen(PORT,() => console.log("Server Listening to port:",PORT));
 

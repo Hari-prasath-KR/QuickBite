@@ -1,4 +1,5 @@
 import React from 'react'
+import BottomNav from './BottomNav'
 
 function OrderPage() {
   return (
@@ -8,6 +9,7 @@ function OrderPage() {
       <p className="text-gray-600">List and manage ongoing orders here.</p>
       {/* TODO: fetch orders and show table/list */}
     </main>
+     <BottomNav/>
     </div>
   )
 }

@@ -19,12 +19,16 @@ const Login = () => {
     );
       console.log(res.data);
 
+      // 1. Extract the user name from the response
+      const loggedInName = res.data.name;
+      // 3. Store the name in localStorage for persistence
+      localStorage.setItem('userName', loggedInName);
       // localStorage.setItem("token", res.data.token);
       // localStorage.setItem("role", res.data.role);
 
       if (res.data.role === "admin") navigate("/admin");
       else if (res.data.role === "cateringAdmin") navigate("/catering");
-      else if (res.data.role === "staff") navigate("/staff");
+      else if (res.data.role === "staff") navigate("/staff/dashboard");
       else navigate("/customer");
     } catch (err) {
       console.error("🔥 Login error:", err.response?.data || err.message);

@@ -8,7 +8,7 @@ const NavBar = () => {
     <div className="navbar bg-green-400 shadow-md px-6">
       <div className="flex-1">
         <a className="text-3xl font-extrabold text-white cursor-pointer">
-          QuickBite 🍔
+          QuickBites 🍔
         </a>
       </div>
       <div className="dropdown dropdown-bottom">

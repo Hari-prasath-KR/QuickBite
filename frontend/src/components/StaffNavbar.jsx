@@ -41,7 +41,7 @@ const Bars3Icon = (props) => (
 );
 
 // --- Navbar ---
-const StaffNavbar = ({ userName = "Amrit Raj", userRole = "Admin" }) => {
+const StaffNavbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -49,7 +49,7 @@ const StaffNavbar = ({ userName = "Amrit Raj", userRole = "Admin" }) => {
       <header className="bg-green-400 backdrop-blur-sm p-4 flex justify-between items-center shadow-md fixed top-0 left-0 w-full z-50">
         {/* Branding */}
         <div className="flex items-center space-x-2">
-          <h1 className="text-3xl font-bold text-white">QuickBite</h1>
+          <h1 className="text-3xl font-bold text-white">QuickBites</h1>
           <span className="text-2xl">👨‍🍳</span>
         </div>
 

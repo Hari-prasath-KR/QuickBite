@@ -1,4 +1,5 @@
 import React from 'react'
+import BottomNav from './BottomNav';
 
 function MenuPage() {
   return (
@@ -7,6 +8,7 @@ function MenuPage() {
       <h1 className="text-2xl font-bold mb-4">Menu</h1>
       <p className="text-gray-600">Add/edit food items, prices and images here.</p>
     </main>
+    <BottomNav/>
     </div>
   )
 }

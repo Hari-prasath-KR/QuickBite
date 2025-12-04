@@ -19,7 +19,7 @@ const BottomNav = () => {
         bg-white shadow-xl rounded-2xl
         flex justify-evenly items-center" >
       <NavLink
-        to="/staff"
+        to="/staff/dashboard"
         className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ""}`}
       >
         <FaHome size={22} />
@@ -57,7 +57,7 @@ const BottomNav = () => {
         <span className="text-xs">Menu</span>
       </NavLink>
       <NavLink
-        to="/staff/more"
+        to="/staff/menu"
         className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ""}`}
       >
         <CiCircleMore size={24} />
