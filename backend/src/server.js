@@ -1,5 +1,7 @@
 import express from 'express'
 import dotenv from "dotenv";
+import http from "http";
+import { Server } from "socket.io";
 import {connectDB} from "./config/db.js"
 import authRoutes from "./routes/authRoutes.js";
 import cateringRoutes from "./routes/cateringRoutes.js"
@@ -16,6 +18,7 @@ import { requireAuth } from './middleware/auth.js';
 import staffRoutes from "./routes/staffRoutes.js"
 import branchAnalyticsRoutes from "./routes/branchAnalyticsRoutes.js";
 import cateringAdminRoutes from "./routes/cateringAdminRoutes.js";
+import customerMenuRoutes from "./routes/customerMenuRoutes.js";
 
 dotenv.config();
 
@@ -33,6 +36,23 @@ app.use(cors({
 
 app.use(express.json());
 
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    credentials: true
+  }
+});
+app.set("io", io);
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("Socket disconnected:", socket.id);
+  });
+});
+
+
 app.use("/api/auth",authRoutes);
 app.use("/api/caterings",cateringRoutes);
 app.use("/api/admin",adminRoutes);
@@ -49,6 +69,7 @@ app.use("/api/staff", staffRoutes);
 app.use("/api/branch-analystics", branchAnalyticsRoutes);
 app.use("/api/catering-admin", cateringAdminRoutes);
 app.use("/api/catering-admin",menuItemRoutes);
+app.use("/api/menu", customerMenuRoutes);
 
 // app.get('/api/test', (req, res) => {
 //   res.json({ message: 'API is working!' });

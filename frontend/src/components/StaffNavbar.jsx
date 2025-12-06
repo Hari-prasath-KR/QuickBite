@@ -43,7 +43,8 @@ const Bars3Icon = (props) => (
 // --- Navbar ---
 const StaffNavbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
+  const userName = "Harii";
+  const userRole = "Staff";
   return (
     <nav>
       <header className="bg-green-400 backdrop-blur-sm p-4 flex justify-between items-center shadow-md fixed top-0 left-0 w-full z-50">

@@ -1,208 +1,363 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import CustomerNavbar from '../components/CustomerNavbar';
+import React, { useEffect, useState, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
+import CustomerNavbar from "../components/CustomerNavbar";
+
+// Floating Cart Icon/Summary Component
+const CartSummary = ({ cart, totalPrice }) => {
+  const totalItems = Object.values(cart).reduce((sum, quantity) => sum + quantity, 0);
+
+  // Simple, prominent display for total items and price
+  return (
+    <div className="flex items-center space-x-2 bg-yellow-500 text-white font-bold p-2 rounded-full shadow-lg cursor-pointer hover:bg-yellow-600 transition duration-300">
+      <svg
+        className="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+        ></path>
+      </svg>
+      {totalItems > 0 && (
+        <span className="text-sm">
+          {totalItems} items | ₹{totalPrice.toFixed(2)}
+        </span>
+      )}
+    </div>
+  );
+};
+
 
 const OrderPage = () => {
-    const { branchId } = useParams();
-    const navigate = useNavigate();
-    const [menuItems, setMenuItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [cart, setCart] = useState({}); // { menuItemId: quantity }
-    const [totalPrice, setTotalPrice] = useState(0);
+  const { branchId } = useParams();
+  const navigate = useNavigate();
+  const [menuItems, setMenuItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState({});
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [isCartVisible, setIsCartVisible] = useState(false); // State for mobile cart view
 
-    useEffect(() => {
-        const fetchMenu = async () => {
-            try {
-                const res = await axios.get(`http://localhost:5001/api/menu/public/branch/${branchId}`);
-                setMenuItems(res.data);
-            } catch (err) {
-                console.error("Error fetching menu:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchMenu();
-    }, [branchId]);
+  // Filters
+  const [category, setCategory] = useState("All");
 
-    const handleAddToCart = (item) => {
-        setCart((prev) => {
-            const newQuantity = (prev[item.menuItemId._id] || 0) + 1;
-            return { ...prev, [item.menuItemId._id]: newQuantity };
-        });
-        setTotalPrice((prev) => prev + item.price);
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        const res = await axios.get(
+          // Assuming branchId is part of the URL path
+          `http://localhost:5001/api/menu/branch/${branchId}` 
+        );
+        setMenuItems(res.data);
+      } catch (err) {
+        console.error("Error fetching menu:", err);
+      } finally {
+        setLoading(false);
+      }
     };
+    fetchMenu();
+  }, [branchId]);
 
-    const handleRemoveFromCart = (item) => {
-        setCart((prev) => {
-            const currentQuantity = prev[item.menuItemId._id] || 0;
-            if (currentQuantity === 0) return prev;
-            const newQuantity = currentQuantity - 1;
-            const newCart = { ...prev, [item.menuItemId._id]: newQuantity };
-            if (newQuantity === 0) delete newCart[item.menuItemId._id];
-            return newCart;
-        });
-        setTotalPrice((prev) => Math.max(0, prev - item.price));
-    };
+  // Derive unique categories for the dropdown menu
+  const uniqueCategories = useMemo(() => {
+    return ["All", ...new Set(menuItems.map((m) => m.menuItemId.category))];
+  }, [menuItems]);
 
-    const handlePlaceOrder = async () => {
-        const items = Object.entries(cart).map(([itemId, quantity]) => {
-            const menuItem = menuItems.find(m => m.menuItemId._id === itemId);
-            return {
-                itemId: itemId,
-                name: menuItem.menuItemId.name,
-                price: menuItem.price,
-                quantity: quantity
-            };
-        });
+  // ⭐ FILTER LOGIC (Search removed)
+  const filteredMenu = menuItems.filter((item) => {
+    // Search is removed, only filter by category
+    const matchesCategory =
+      category === "All" || item.menuItemId.category === category;
 
-        if (items.length === 0) {
-            alert("Your cart is empty!");
-            return;
-        }
+    return matchesCategory;
+  });
 
-        // Assuming user is logged in and we can get userId from somewhere (e.g., context or local storage)
-        // For now, let's prompt for login if not logged in, or handle it gracefully.
-        // Since this is a public page, we might need to check auth status before placing order.
+  const handleAddToCart = (item) => {
+    setCart((prev) => {
+      const newQuantity = (prev[item.menuItemId._id] || 0) + 1;
+      return { ...prev, [item.menuItemId._id]: newQuantity };
+    });
+    setTotalPrice((prev) => prev + item.price);
+  };
 
-        // For this implementation, I'll assume we need to be logged in to place an order.
-        // We can check for a token or user info in local storage/cookies.
+  const handleRemoveFromCart = (item) => {
+    setCart((prev) => {
+      const currentQuantity = prev[item.menuItemId._id] || 0;
+      if (currentQuantity === 0) return prev;
 
-        try {
-            // Retrieve user info from local storage or context if available
-            // This part depends on how auth is handled in the app. 
-            // Based on CustomerDashboard, it seems we use cookies.
+      const newQuantity = currentQuantity - 1;
+      const newCart = { ...prev, [item.menuItemId._id]: newQuantity };
 
-            // We need the cateringId. We can get it from the first menu item.
-            const cateringId = menuItems[0]?.menuItemId.cateringId;
+      if (newQuantity === 0) delete newCart[item.menuItemId._id];
 
-            // We need userId. If not available, redirect to login.
-            // For now, let's try to place the order and see if backend rejects it (it requires userId).
-            // Actually, the backend requires userId in the body.
+      return newCart;
+    });
 
-            // Let's assume we have a way to get the current user. 
-            // If not, we should redirect to login.
-            // For this task, I'll add a check.
+    setTotalPrice((prev) => Math.max(0, prev - item.price));
+  };
 
-            // NOTE: In a real app, we'd use a context for auth.
-            // I'll try to fetch the current user profile first to get the ID.
+  const handlePlaceOrder = async () => {
+    const items = Object.entries(cart).map(([itemId, quantity]) => {
+      const menuItem = menuItems.find((m) => m.menuItemId._id === itemId);
 
-            let userId;
-            try {
-                const userRes = await axios.get("http://localhost:5001/api/users/profile", { withCredentials: true });
-                userId = userRes.data._id;
-            } catch (e) {
-                alert("Please login to place an order.");
-                navigate("/login");
-                console.log(e);
-                return;
-            }
+      return {
+        itemId,
+        name: menuItem.menuItemId.name,
+        price: menuItem.price,
+        quantity,
+      };
+    });
 
-            const orderData = {
-                userId,
-                cateringId,
-                branchId,
-                items,
-                total: totalPrice,
-                payment: {
-                    method: "Online",
-                    paid: true // Simulating successful payment for now
-                }
-            };
+    if (items.length === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
 
-            await axios.post("http://localhost:5001/api/orders", orderData, { withCredentials: true });
-            alert("Order placed successfully!");
-            setCart({});
-            setTotalPrice(0);
-            navigate("/customer/dashboard"); // Redirect to dashboard
+    try {
+      let userId;
+      try {
+        const userRes = await axios.get(
+          "http://localhost:5001/api/auth/profile",
+          { withCredentials: true }
+        );
+        console.log(userRes.data)
+        userId = userRes.data.data._id;
+        console.log("User ID:", userId);
+      } catch (e) {
+        console.log(e);
+        alert("Please login to place an order.");
+        navigate("/login");
+        return;
+      }
+      
+      // Safety check for menuItems[0]
+      const cateringId = menuItems.length > 0 ? menuItems[0].menuItemId.cateringId : null;
 
-        } catch (err) {
-            console.error("Error placing order:", err);
-            alert("Failed to place order. Please try again.");
-        }
-    };
+      const orderData = {
+        userId,
+        cateringId,
+        branchId,
+        items,
+        total: totalPrice,
+        payment: {
+          method: "Online",
+          paid: true,
+        },
+      };
+     console.log("Sending order data:", orderData);
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading menu...</div>;
+      await axios.post("http://localhost:5001/api/order/", orderData);
+      alert("Order placed successfully!");
+      setCart({});
+      setTotalPrice(0);
+      setIsCartVisible(false); // Close cart after placing order
+
+    } catch (err) {
+      console.error("Error placing order:", err);
+      alert("Failed to place order. Please try again.");
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading menu...
+      </div>
+    );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white">
+      {/* Navbar - Fixed top, higher z-index */}
+      <div className="fixed top-0 left-0 w-full z-50 shadow-lg">
+        <CustomerNavbar />
+      </div>
+
+      <div className="pt-24 px-6 container mx-auto max-w-7xl">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Menu</h1>
+
+        {/* 🌟 NEW HEADER WITH FILTER AND CART BUTTON */}
+        <div className="flex justify-between items-center mb-8">
+            {/* ⬅️ CATEGORY FILTER DROPDOWN */}
+            <div className="flex items-center space-x-4">
+                <label htmlFor="category-select" className="font-semibold text-gray-700">Filter:</label>
+                <select
+                    id="category-select"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="px-4 py-2 rounded-lg border shadow-sm focus:ring-2 focus:ring-yellow-400"
+                >
+                    {uniqueCategories.map((c) => (
+                        <option key={c}>{c}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* ➡️ CART BUTTON (Visible on small screens) */}
+            <div className="md:hidden" onClick={() => setIsCartVisible(true)}>
+                <CartSummary cart={cart} totalPrice={totalPrice} />
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* 🍽 MENU GRID */}
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {filteredMenu.map((item) => (
+              <div
+                key={item._id}
+                className="bg-white rounded-xl shadow-lg p-4 border border-gray-100 transition hover:shadow-2xl"
+              >
+                <img
+                  src={
+                    item.menuItemId.imageUrl ||
+                    "https://via.placeholder.com/150"
+                  }
+                  alt={item.menuItemId.name}
+                  className="w-full h-40 object-cover rounded-lg"
+                />
+
+                <h3 className="text-xl font-semibold mt-3">
+                  {item.menuItemId.name}
+                </h3>
+
+                <p className="text-gray-500 text-sm h-10 overflow-hidden">
+                  {item.menuItemId.description}
+                </p>
+
+                <p className="text-green-600 font-bold text-lg mt-2">
+                  ₹{item.price}
+                </p>
+
+                {cart[item.menuItemId._id] ? (
+                  <div className="flex items-center mt-4 bg-green-100 rounded-lg justify-between p-1">
+                    <button
+                      onClick={() => handleRemoveFromCart(item)}
+                      className="px-3 text-lg font-bold text-red-500 hover:bg-green-200 rounded-lg"
+                    >
+                      -
+                    </button>
+                    <span className="mx-2 font-bold text-green-700">
+                      {cart[item.menuItemId._id]}
+                    </span>
+                    <button
+                      onClick={() => handleAddToCart(item)}
+                      className="px-3 text-lg font-bold text-green-700 hover:bg-green-200 rounded-lg"
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleAddToCart(item)}
+                    className="w-full mt-4 bg-yellow-500 text-white font-bold py-2 rounded-lg hover:bg-yellow-600 transition"
+                  >
+                    Add to Cart
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 🛒 FIXED CART (Desktop only) */}
+          <div className="hidden md:block">
+            <div className="sticky top-28 w-full z-30"> {/* Changed 'fixed' to 'sticky' for better scroll behavior */}
+              <div className="bg-white rounded-xl shadow-xl p-6 border border-yellow-300">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                  Your Cart
+                </h2>
+                <CartContent 
+                    cart={cart} 
+                    menuItems={menuItems} 
+                    totalPrice={totalPrice} 
+                    handlePlaceOrder={handlePlaceOrder} 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* 📱 MOBILE CART MODAL */}
+      <MobileCartModal 
+          isVisible={isCartVisible}
+          onClose={() => setIsCartVisible(false)}
+          cart={cart}
+          menuItems={menuItems}
+          totalPrice={totalPrice}
+          handlePlaceOrder={handlePlaceOrder}
+      />
+    </div>
+  );
+};
+
+
+// Helper component for Cart content (reused for desktop and mobile)
+const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder }) => (
+    <>
+      {Object.keys(cart).length === 0 ? (
+        <p className="text-gray-500">Your cart is empty. Add some delicious food!</p>
+      ) : (
+        <>
+          <div className="max-h-60 overflow-y-auto mb-4">
+            {Object.entries(cart).map(([itemId, quantity]) => {
+              const item = menuItems.find(
+                (m) => m.menuItemId._id === itemId
+              );
+              // Safety check: ensure item is found
+              if (!item) return null; 
+
+              return (
+                <div
+                  key={itemId}
+                  className="flex justify-between items-center py-2 border-b last:border-b-0"
+                >
+                  <span className="text-sm truncate mr-2">{item.menuItemId.name} × {quantity}</span>
+                  <span className="font-semibold text-sm">
+                    ₹{(item.price * quantity).toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-between text-xl font-bold mt-4 pt-2 border-t border-dashed">
+            <span>Total</span>
+            <span className="text-green-700">₹{totalPrice.toFixed(2)}</span>
+          </div>
+
+          <button
+            onClick={handlePlaceOrder}
+            className="w-full mt-6 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition"
+          >
+            Place Order
+          </button>
+        </>
+      )}
+    </>
+);
+
+// Helper component for Mobile Cart Modal
+const MobileCartModal = ({ isVisible, onClose, ...props }) => {
+    if (!isVisible) return null;
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="fixed top-0 left-0 w-full z-50 shadow-lg">
-                <CustomerNavbar />
-            </div>
-            <div className="pt-24 px-6 container mx-auto max-w-6xl">
-                <h1 className="text-3xl font-bold text-gray-800 mb-8">Menu</h1>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* Menu Items */}
-                    <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        {menuItems.map((item) => (
-                            <div key={item._id} className="bg-white rounded-xl shadow-md p-4 flex flex-col justify-between border border-gray-100">
-                                <div>
-                                    <img
-                                        src={item.menuItemId.imageUrl || "https://via.placeholder.com/150"}
-                                        alt={item.menuItemId.name}
-                                        className="w-full h-40 object-cover rounded-lg mb-4"
-                                    />
-                                    <h3 className="text-xl font-semibold text-gray-800">{item.menuItemId.name}</h3>
-                                    <p className="text-gray-500 text-sm mt-1">{item.menuItemId.description}</p>
-                                    <p className="text-lg font-bold text-green-600 mt-2">₹{item.price}</p>
-                                </div>
-                                <div className="mt-4 flex items-center justify-between">
-                                    {cart[item.menuItemId._id] ? (
-                                        <div className="flex items-center bg-green-100 rounded-lg px-2 py-1">
-                                            <button onClick={() => handleRemoveFromCart(item)} className="px-2 text-green-700 font-bold text-lg">-</button>
-                                            <span className="mx-2 font-semibold text-green-800">{cart[item.menuItemId._id]}</span>
-                                            <button onClick={() => handleAddToCart(item)} className="px-2 text-green-700 font-bold text-lg">+</button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => handleAddToCart(item)}
-                                            className="w-full bg-yellow-500 text-white font-semibold py-2 rounded-lg hover:bg-yellow-600 transition"
-                                        >
-                                            Add to Cart
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Cart Summary (Sticky) */}
-                    <div className="md:col-span-1">
-                        <div className="bg-white rounded-xl shadow-lg p-6 sticky top-28 border border-yellow-200">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-4">Your Cart</h2>
-                            {Object.keys(cart).length === 0 ? (
-                                <p className="text-gray-500">Your cart is empty.</p>
-                            ) : (
-                                <div className="space-y-4">
-                                    {Object.entries(cart).map(([itemId, quantity]) => {
-                                        const item = menuItems.find(m => m.menuItemId._id === itemId);
-                                        return (
-                                            <div key={itemId} className="flex justify-between items-center text-sm">
-                                                <span className="text-gray-700">{item.menuItemId.name} x {quantity}</span>
-                                                <span className="font-semibold">₹{item.price * quantity}</span>
-                                            </div>
-                                        );
-                                    })}
-                                    <hr className="border-gray-200 my-4" />
-                                    <div className="flex justify-between items-center text-xl font-bold text-gray-900">
-                                        <span>Total</span>
-                                        <span>₹{totalPrice}</span>
-                                    </div>
-                                    <button
-                                        onClick={handlePlaceOrder}
-                                        className="w-full mt-6 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition shadow-md hover:shadow-lg"
-                                    >
-                                        Place Order
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 z-[60] flex items-end md:hidden">
+            <div className="bg-white w-full p-6 rounded-t-xl shadow-2xl transform transition-all duration-300 ease-out">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-gray-800">Your Cart</h2>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
                 </div>
+                <CartContent {...props} />
             </div>
         </div>
     );
 };
+
 
 export default OrderPage;

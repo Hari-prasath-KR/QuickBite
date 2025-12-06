@@ -73,17 +73,27 @@ export const login = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const token = req.cookies.JWT_TOKEN_QUICKBITE;
-
-    if (!token) return res.status(401).json({ msg: "Unauthorized" });
+    if (!token)
+      return res.status(401).json({ msg: "Unauthorized: No token provided" });
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
 
-    res.json(user);
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    res.json({ data: user });
+
   } catch (err) {
-    res.status(500).json({ msg: "Server error", err });
+    if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+      return res.status(401).json({ msg: "Unauthorized: Invalid or expired token" });
+    }
+
+    res.status(500).json({ msg: "Server error", error: err.message });
   }
 };
+
 
 export const logout = (req, res) => {
   try {

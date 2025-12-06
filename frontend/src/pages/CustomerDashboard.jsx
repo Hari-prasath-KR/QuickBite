@@ -43,7 +43,8 @@ const CustomerDashboard = () => {
 
   const handleCateringClick = async (catering) => {
     try {
-      const res = await axios.get(`http://localhost:5001/api/branches/public/${catering._id}`);
+      const res = await axios.get(`http://localhost:5001/api/branch/public/${catering._id}`);
+      //console.log(res.data);
       setBranches(res.data);
       setSelectedCatering(catering);
       setShowBranchPopup(true);

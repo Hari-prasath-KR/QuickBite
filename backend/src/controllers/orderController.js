@@ -66,3 +66,40 @@ export const getOrders = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      { status },
+      { new: true }
+    ).populate("userId", "name");
+
+    if (!updatedOrder) {
+      return res.status(404).json({ msg: "Order not found" });
+    }
+
+    // get socket instance
+    const io = req.app.get("io");
+
+    // emit event to frontend
+    io.emit("orderUpdated", {
+      orderId: updatedOrder._id.toString(),
+      status: updatedOrder.status,
+      branchId: updatedOrder.branchId.toString()
+    });
+
+    res.json({
+      msg: "Status updated successfully",
+      order: updatedOrder
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
