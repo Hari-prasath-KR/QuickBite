@@ -29,7 +29,7 @@ const ProfilePage = () => {
       navigate('/home');
     } catch (err) {
       console.error('Logout failed:', err);
-  
+
     }
   };
 
@@ -65,25 +65,25 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans">
-      <nav className="bg-slate-800 shadow-md">
+    <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white font-sans">
+      <nav className="bg-green-400 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex-shrink-0">
-              <span className="text-white font-bold text-xl">YourApp</span>
+              <span className="text-white font-extrabold text-2xl">QuickBite 🍔</span>
             </div>
             <div className="flex items-center space-x-4">
               {user.role === 'customer' && (
                 <button
                   onClick={() => navigate('/order-history')}
-                  className="text-gray-300 hover:bg-slate-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition"
+                  className="text-white hover:bg-green-500 px-3 py-2 rounded-md text-sm font-medium transition"
                 >
                   Order History
                 </button>
               )}
               <button
                 onClick={handleLogout}
-                className="bg-red-600 text-white hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium transition"
+                className="bg-red-500 text-white hover:bg-red-600 px-4 py-2 rounded-md text-sm font-medium transition shadow"
               >
                 Logout
               </button>
@@ -92,19 +92,18 @@ const ProfilePage = () => {
         </div>
       </nav>
 
-      
-      <main className="pt-10">
-        <div className="max-w-lg mx-auto bg-white rounded-xl shadow-lg p-8 space-y-6 w-11/12 md:w-1/2">
+      <main className="pt-10 pb-10 flex justify-center">
+        <div className="max-w-lg w-full bg-white rounded-xl shadow-xl p-8 space-y-6 mx-4 border border-yellow-300">
           <div className="flex justify-center">
             <div className="relative">
               <img
-                className="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
-                src={user.profilePhotoUrl || '/default-profile.svg'}
+                className="w-32 h-32 rounded-full object-cover border-4 border-yellow-400 shadow-sm"
+                src={user.profilePhotoUrl || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}
                 alt="Profile"
               />
               <button
                 onClick={handlePhotoEditClick}
-                className="absolute bottom-0 right-0 bg-slate-700 hover:bg-slate-900 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+                className="absolute bottom-0 right-0 bg-green-500 hover:bg-green-600 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 transition shadow"
                 title="Edit profile photo"
               >
                 <svg
@@ -139,13 +138,25 @@ const ProfilePage = () => {
           </div>
 
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-800">{user.name}</h2>
-            <p className="text-md text-gray-500 mt-1">{user.email}</p>
+            <h2 className="text-3xl font-extrabold text-green-900">{user.name}</h2>
+            <p className="text-lg text-gray-600 mt-1">{user.email}</p>
+            <span className="inline-block mt-2 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full uppercase tracking-wide">
+              {user.role}
+            </span>
           </div>
-          <div className="border-t pt-6 text-center">
-            <button className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
+
+          <div className="border-t border-gray-100 pt-6 text-center space-y-3">
+            <button className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition shadow-md">
               Edit Name & Email
             </button>
+            {user.role === 'customer' && (
+              <button
+                onClick={() => navigate('/order-history')}
+                className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition shadow-md"
+              >
+                View Order History 📜
+              </button>
+            )}
           </div>
         </div>
       </main>
