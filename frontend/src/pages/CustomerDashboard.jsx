@@ -7,12 +7,12 @@ import { useNavigate } from "react-router-dom";
 
 // Skeleton Loader for a better initial loading experience
 const CateringCardSkeleton = () => (
-  <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center border border-gray-200 animate-pulse">
-    <div className="h-24 w-24 rounded-full bg-gray-200 mb-4"></div>
-    <div className="h-6 w-3/4 rounded bg-gray-200 mb-2"></div>
-    <div className="h-4 w-full rounded bg-gray-200 mb-4"></div>
-    <div className="h-4 w-1/2 rounded bg-gray-200"></div>
-    <div className="mt-6 h-10 w-32 bg-gray-200 rounded-lg"></div>
+  <div className="bg-white/45 backdrop-blur-md rounded-2xl shadow-md p-6 flex flex-col items-center border border-white/20 animate-pulse">
+    <div className="h-24 w-24 rounded-full bg-slate-200/50 mb-4"></div>
+    <div className="h-6 w-3/4 rounded bg-slate-200/50 mb-2"></div>
+    <div className="h-4 w-full rounded bg-slate-200/50 mb-4"></div>
+    <div className="h-4 w-1/2 rounded bg-slate-200/50"></div>
+    <div className="mt-6 h-10 w-32 bg-slate-200/50 rounded-lg"></div>
   </div>
 );
 
@@ -163,9 +163,9 @@ const CustomerDashboard = () => {
         </section>
 
         {/* === FEATURED CATERINGS SECTION === */}
-        <section id="caterings" className="py-20 px-6">
-          <div className="container mx-auto max-w-6xl text-center">
-            <h2 className="text-3xl font-bold text-gray-800 mb-12">
+        <section id="caterings" className="py-20 px-6 w-full max-w-6xl">
+          <div className="container mx-auto text-center">
+            <h2 className="text-3xl font-extrabold text-slate-900 mb-12">
               Caterings On Campus
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
@@ -175,21 +175,21 @@ const CustomerDashboard = () => {
                 : caterings.map((catering) => (
                   <div
                     key={catering._id}
-                    className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center border border-gray-200 transition-transform transform hover:scale-105 hover:shadow-2xl cursor-pointer"
+                    className="bg-white/45 backdrop-blur-md rounded-2xl border border-white/25 shadow-md p-6 flex flex-col items-center transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer"
                     onClick={() => handleCateringClick(catering)} // Open branch popup
                   >
                     <img
                       src={catering.logo}
                       alt={catering.name}
-                      className="h-24 w-24 object-contain mb-4 rounded-full border-2 border-yellow-300"
+                      className="h-24 w-24 object-contain mb-4 rounded-full border-2 border-yellow-400/60 shadow-sm bg-white/10"
                     />
-                    <h3 className="text-2xl font-bold text-gray-800">
+                    <h3 className="text-2xl font-extrabold text-slate-900">
                       {catering.name}
                     </h3>
-                    <p className="text-gray-600 text-sm mt-2 text-center flex-grow">
+                    <p className="text-slate-700 text-sm mt-2 text-center flex-grow font-medium">
                       {catering.description || "Delicious meals for everyone!"}
                     </p>
-                    <button className="mt-6 px-6 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-all">
+                    <button className="mt-6 px-6 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-all shadow-sm">
                       View Menu
                     </button>
                   </div>
