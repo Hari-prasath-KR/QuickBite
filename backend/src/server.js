@@ -1,5 +1,7 @@
-import express from 'express'
 import dotenv from "dotenv";
+dotenv.config();
+
+import express from 'express'
 import http from "http";
 import { Server } from "socket.io";
 import {connectDB} from "./config/db.js"
@@ -20,7 +22,6 @@ import branchAnalyticsRoutes from "./routes/branchAnalyticsRoutes.js";
 import cateringAdminRoutes from "./routes/cateringAdminRoutes.js";
 import customerMenuRoutes from "./routes/customerMenuRoutes.js";
 
-dotenv.config();
 
 const PORT=process.env.PORT||5001
 
