@@ -53,7 +53,6 @@ const OrderPage = () => {
   const [receiptData, setReceiptData] = useState(null); // Backend-returned order details
   const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
   const [mockPaymentData, setMockPaymentData] = useState(null);
-  const [forceSandbox, setForceSandbox] = useState(false);
 
   // Load menu items on mount
   useEffect(() => {
@@ -167,8 +166,13 @@ const OrderPage = () => {
       const grandTotalPaise = Math.round(totalPrice * 1.05 * 100);
       
       let razorpayOrder;
-      if (forceSandbox) {
-        console.warn("⚡ Developer forced Sandbox Mock Mode checkout.");
+      try {
+        const orderCreateRes = await axios.post("http://localhost:5001/api/order/razorpay-order", {
+          amount: grandTotalPaise,
+        });
+        razorpayOrder = orderCreateRes.data;
+      } catch (err) {
+        console.warn("⚠️ Backend failed to initialize online payment order, falling back to client-side mock:", err);
         razorpayOrder = {
           id: `order_mock_${Date.now()}`,
           amount: grandTotalPaise,
@@ -177,23 +181,6 @@ const OrderPage = () => {
           key_id: "rzp_test_placeholder_key",
           isMock: true
         };
-      } else {
-        try {
-          const orderCreateRes = await axios.post("http://localhost:5001/api/order/razorpay-order", {
-            amount: grandTotalPaise,
-          });
-          razorpayOrder = orderCreateRes.data;
-        } catch (err) {
-          console.warn("⚠️ Backend failed to initialize online payment order, falling back to client-side mock:", err);
-          razorpayOrder = {
-            id: `order_mock_${Date.now()}`,
-            amount: grandTotalPaise,
-            currency: "INR",
-            receipt: `receipt_${Date.now()}`,
-            key_id: "rzp_test_placeholder_key",
-            isMock: true
-          };
-        }
       }
 
       // 3. Open original Razorpay checkout popup
@@ -483,8 +470,6 @@ const OrderPage = () => {
                     totalPrice={totalPrice} 
                     handlePlaceOrder={handlePlaceOrder}
                     checkoutLoading={checkoutLoading}
-                    forceSandbox={forceSandbox}
-                    setForceSandbox={setForceSandbox}
                   />
                 </div>
               </div>
@@ -503,8 +488,6 @@ const OrderPage = () => {
         totalPrice={totalPrice}
         handlePlaceOrder={handlePlaceOrder}
         checkoutLoading={checkoutLoading}
-        forceSandbox={forceSandbox}
-        setForceSandbox={setForceSandbox}
       />
 
       {/* 💳 HIGH-FIDELITY QUICKBITE PAYMENT SANDBOX FALLBACK MODAL */}
@@ -716,7 +699,7 @@ const OrderPage = () => {
 };
 
 // Helper component for Cart content
-const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLoading, forceSandbox, setForceSandbox }) => (
+const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLoading }) => (
   <>
     {Object.keys(cart).length === 0 ? (
       <div className="text-center py-10 flex flex-col items-center">
@@ -764,21 +747,6 @@ const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLo
           </div>
         </div>
 
-        {/* Developer Sandbox Toggle */}
-        <div className="mt-4 p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-dashed border-slate-200 transition duration-200">
-          <label className="flex items-center space-x-3 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={forceSandbox}
-              onChange={(e) => setForceSandbox && setForceSandbox(e.target.checked)}
-              className="w-4 h-4 text-green-600 border-slate-300 rounded focus:ring-green-400 cursor-pointer"
-            />
-            <div className="flex flex-col">
-              <span className="text-xs font-black text-slate-700">Developer Sandbox Mode</span>
-              <span className="text-xxs text-slate-400">Force local checkout bypass for quick testing</span>
-            </div>
-          </label>
-        </div>
 
         <button
           onClick={handlePlaceOrder}
