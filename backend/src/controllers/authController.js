@@ -30,6 +30,7 @@ export const register = async (req, res) => {
     await user.save();
     res.status(201).json({ message: "Customer Registered Successfully" });
   } catch (error) {
+    console.error("🔥 Register error:", error);
     res
       .status(500)
       .json({ message: "Internal Server Error", error: error.message });
@@ -115,5 +116,53 @@ export const logout = (req, res) => {
       success: false,
       message: `Error: Logout Failed...`,
     });
+  }
+};
+
+// Google Login/Register Handler
+export const googleLogin = async (req, res) => {
+  try {
+    const { name, email, googleId } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required for Google Sign-in" });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Auto-register a new customer user
+      const randomPassword = Math.random().toString(36).slice(-12) + "A1!";
+      const hashedpass = await bcrypt.hash(randomPassword, 10);
+      
+      user = new User({
+        name: name || email.split("@")[0],
+        email,
+        password: hashedpass,
+        role: "customer",
+      });
+
+      await user.save();
+      console.log(`🆕 Google user auto-registered: ${email}`);
+    }
+
+    // Sign the standard JWT token
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.cookie("JWT_TOKEN_QUICKBITE", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
+
+    res.json({ token, role: user.role, userId: user._id, name: user.name });
+  } catch (error) {
+    console.error("🔥 Google Login error:", error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };

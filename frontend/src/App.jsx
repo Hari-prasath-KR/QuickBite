@@ -10,6 +10,7 @@ import StaffDashboard from "./pages/Staff/StaffDashboard";
 import CateringAdminDashboard from "./pages/CateringAdmin/CateringAdminDashboard";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import CustomerOrderPage from "./pages/OrderPage";
+import CustomerOrderHistoryPage from "./pages/OrderHistory";
 import AddCatering from "./pages/Admin/AddCatering";
 import ManageCatering from "./pages/Admin/ManageCaterings";
 import AddCateringAdmin from "./pages/Admin/AddCateringAdmin";
@@ -48,6 +49,8 @@ const App = () => {
       <Route path="/catering/manage-analysis" element={<ManageAnalysis/>}/> */}
         <Route path="/customer" element={<CustomerDashboard />} />
         <Route path="/customer/order/:branchId" element={<CustomerOrderPage />} />
+        <Route path="/customer/order-history" element={<CustomerOrderHistoryPage />} />
+        <Route path="/order-history" element={<CustomerOrderHistoryPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/staff/dashboard" element={<StaffDashboard />} />
         <Route path="/staff/order" element={<OrderPage />} />
@@ -59,3 +62,4 @@ const App = () => {
 };
 
 export default App;
+

@@ -24,10 +24,10 @@ function CustomerNavbar() {
             </div>
             <ul
               tabIndex={0}
-              className="menu menu-sm dropdown-content bg-white text-black rounded-box z-[1] mt-3 w-52 p-2 shadow">
-              <li><a  onClick={()=>navigate("/customer")}>Homepage</a></li>
-              <li><a  onClick={()=>navigate("/profile")}>Portfolio</a></li>
-              <li><a>About</a></li>
+              className="menu menu-sm dropdown-content bg-white text-black rounded-box z-[1] mt-3 w-52 p-3 shadow-2xl border border-slate-100 space-y-1">
+              <li><a className="font-semibold py-2 hover:bg-slate-50 rounded-lg" onClick={()=>navigate("/customer")}>🏠 Homepage</a></li>
+              <li><a className="font-semibold py-2 hover:bg-slate-50 rounded-lg" onClick={()=>navigate("/customer/order-history")}>📜 Order History</a></li>
+              <li><a className="font-semibold py-2 hover:bg-slate-50 rounded-lg" onClick={()=>navigate("/profile")}>👤 Profile Portfolio</a></li>
             </ul>
           </div>
           <a className="text-3xl font-extrabold text-white cursor-pointer ml-4" onClick={()=>{navigate("/customer")}}>
