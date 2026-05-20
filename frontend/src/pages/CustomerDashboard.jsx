@@ -96,46 +96,64 @@ const CustomerDashboard = () => {
         </section>
 
         {/* === HOW IT WORKS SECTION === */}
+        <section className="py-12 w-full max-w-5xl px-4">
+          <div className="bg-white/70 backdrop-blur-xl rounded-3xl border border-white/95 shadow-2xl p-8 md:p-12 transition-all duration-500">
+            
+            {/* Unified Header */}
+            <div className="text-center max-w-2xl mx-auto mb-10">
+              <span className="text-xs font-bold uppercase tracking-widest bg-emerald-100 text-emerald-800 px-3.5 py-1.5 rounded-full">
+                ✨ How It Works
+              </span>
+              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mt-4 tracking-tight leading-none">
+                Order with Ease
+              </h2>
+              <p className="text-slate-600 mt-3 text-base md:text-lg font-semibold">
+                Getting your favorite meal has never been easier.
+              </p>
+              <div className="w-20 h-1.5 bg-gradient-to-r from-emerald-500 to-green-400 mx-auto mt-5 rounded-full shadow-sm"></div>
+            </div>
 
-        <section className="py-8 md:py-8">
-          <div className="container mx-auto max-w-5xl text-center px-4">
-            <h2 className="text-3xl font-bold text-slate-800 mb-4">
-              Order with Ease
-            </h2>
-            <p className="text-slate-700 mb-16 max-w-2xl mx-auto">
-              Getting your favorite meal has never been easier.
-            </p>
-            <div className="grid md:grid-cols-3 gap-8">
+            {/* Integrated Steps */}
+            <div className="grid md:grid-cols-3 gap-6">
 
               {/* Step 1 */}
-              <div className="bg-white/50 backdrop-blur-lg rounded-2xl p-8 shadow-lg flex flex-col items-center border border-white/60">
-                <div className="bg-green-100 rounded-full p-4 mb-5 inline-flex">
-                  <span className="text-4xl">📍</span>
+              <div className="bg-white/90 border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group flex flex-col items-center text-center hover:-translate-y-1">
+                <div className="bg-emerald-50 rounded-full p-4 mb-4 inline-flex group-hover:scale-110 transition duration-300 ring-4 ring-emerald-50/50">
+                  <span className="text-3xl">📍</span>
                 </div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2">Choose & Customize</h3>
-                <p className="text-slate-600">
+                <div className="bg-emerald-100 text-emerald-800 text-xs font-black px-2.5 py-0.5 rounded-full mb-3 uppercase tracking-wider">
+                  Step 01
+                </div>
+                <h3 className="text-lg font-black text-slate-800 mb-2">Choose & Customize</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">
                   Browse menus from all available caterings on campus.
                 </p>
               </div>
 
               {/* Step 2 */}
-              <div className="bg-white/50 backdrop-blur-lg rounded-2xl p-8 shadow-lg flex flex-col items-center border border-white/60">
-                <div className="bg-green-100 rounded-full p-4 mb-5 inline-flex">
-                  <span className="text-4xl">💳</span>
+              <div className="bg-white/90 border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group flex flex-col items-center text-center hover:-translate-y-1">
+                <div className="bg-emerald-50 rounded-full p-4 mb-4 inline-flex group-hover:scale-110 transition duration-300 ring-4 ring-emerald-50/50">
+                  <span className="text-3xl">💳</span>
                 </div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2">Pay Securely Online</h3>
-                <p className="text-slate-600">
+                <div className="bg-emerald-100 text-emerald-800 text-xs font-black px-2.5 py-0.5 rounded-full mb-3 uppercase tracking-wider">
+                  Step 02
+                </div>
+                <h3 className="text-lg font-black text-slate-800 mb-2">Pay Securely Online</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">
                   Fast and secure payments. No need for cash.
                 </p>
               </div>
 
               {/* Step 3 */}
-              <div className="bg-white/50 backdrop-blur-lg rounded-2xl p-8 shadow-lg flex flex-col items-center border border-white/60">
-                <div className="bg-green-100 rounded-full p-4 mb-5 inline-flex">
-                  <span className="text-4xl">🍔</span>
+              <div className="bg-white/90 border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group flex flex-col items-center text-center hover:-translate-y-1">
+                <div className="bg-emerald-50 rounded-full p-4 mb-4 inline-flex group-hover:scale-110 transition duration-300 ring-4 ring-emerald-50/50">
+                  <span className="text-3xl">🍔</span>
                 </div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2">Enjoy Your Meal</h3>
-                <p className="text-slate-600">
+                <div className="bg-emerald-100 text-emerald-800 text-xs font-black px-2.5 py-0.5 rounded-full mb-3 uppercase tracking-wider">
+                  Step 03
+                </div>
+                <h3 className="text-lg font-black text-slate-800 mb-2">Enjoy Your Meal</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">
                   We'll notify you when it's ready. Just grab and go!
                 </p>
               </div>
