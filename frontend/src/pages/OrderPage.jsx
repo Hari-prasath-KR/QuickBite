@@ -341,7 +341,7 @@ const OrderPage = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-400 via-yellow-200 to-white">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mb-4"></div>
-        <p className="text-green-900 font-semibold text-lg animate-pulse">Loading Delicious Menu...</p>
+        <p className="text-green-900 font-semibold text-lg animate-pulse">Loading Menu...</p>
       </div>
     );
   }
@@ -358,7 +358,7 @@ const OrderPage = () => {
         <div className="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/50 flex flex-col sm:flex-row justify-between items-center gap-4 mb-10">
           <div>
             <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">Available Menu</h1>
-            <p className="text-slate-600 text-sm mt-1">Order food and pay easily using online Razorpay gateway.</p>
+            <p className="text-slate-600 text-sm mt-1">Select items and pay securely online.</p>
           </div>
           
           <div className="flex items-center space-x-4">
@@ -414,7 +414,7 @@ const OrderPage = () => {
 
                       <h3 className="text-xl font-bold text-slate-800">{item.menuItemId?.name}</h3>
                       <p className="text-slate-500 text-sm mt-1.5 line-clamp-2 h-10">
-                        {item.menuItemId?.description || "Delicious campus favorite dish prepared fresh."}
+                        {item.menuItemId?.description || "Freshly prepared campus meal."}
                       </p>
                     </div>
 
@@ -560,7 +560,7 @@ const OrderPage = () => {
                 }}
                 className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition duration-200 shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center space-x-2 text-base cursor-pointer"
               >
-                <span>🔒 Simulate Secure Payment</span>
+                <span>Simulate Payment</span>
               </button>
 
               <button
@@ -704,7 +704,7 @@ const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLo
     {Object.keys(cart).length === 0 ? (
       <div className="text-center py-10 flex flex-col items-center">
         <span className="text-4xl text-slate-300 mb-2">🍽️</span>
-        <p className="text-slate-400 text-sm">Your cart is empty. Let's add some delicious foods!</p>
+        <p className="text-slate-400 text-sm">Your cart is empty.</p>
       </div>
     ) : (
       <>
@@ -756,11 +756,11 @@ const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLo
           {checkoutLoading ? (
             <>
               <span className="animate-spin inline-block h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></span>
-              Securing Payment...
+              Processing Payment...
             </>
           ) : (
             <>
-              <span>🔒</span> Pay & Place Order
+              Pay & Place Order
             </>
           )}
         </button>

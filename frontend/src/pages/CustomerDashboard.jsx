@@ -97,7 +97,7 @@ const CustomerDashboard = () => {
                   onClick={() => document.getElementById('caterings').scrollIntoView({ behavior: 'smooth' })}
                   className="px-8 py-3 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transform hover:scale-105 transition-all"
                 >
-                  Browse Caterings 👇
+                  Browse Menu
                 </button>
               </div>
             </div>
@@ -118,7 +118,7 @@ const CustomerDashboard = () => {
             {/* Unified Header */}
             <div className="text-center max-w-2xl mx-auto mb-10">
               <span className="text-xs font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-800 px-3.5 py-1.5 rounded-full">
-                ✨ How It Works
+                How It Works
               </span>
               <h2 className="text-4xl md:text-5xl font-black text-slate-900 mt-4 tracking-tight leading-none">
                 Order with Ease
@@ -138,11 +138,11 @@ const CustomerDashboard = () => {
                   <span className="text-3xl">📍</span>
                 </div>
                 <div className="bg-emerald-500/20 text-emerald-900 text-xs font-black px-2.5 py-0.5 rounded-full mb-3 uppercase tracking-wider">
-                  Step 01
+                  Step 1
                 </div>
                 <h3 className="text-lg font-black text-slate-800 mb-2">Choose & Customize</h3>
                 <p className="text-slate-600 text-sm leading-relaxed">
-                  Browse menus from all available caterings on campus.
+                  Choose your meal from campus caterings.
                 </p>
               </div>
 
@@ -152,11 +152,11 @@ const CustomerDashboard = () => {
                   <span className="text-3xl">💳</span>
                 </div>
                 <div className="bg-emerald-500/20 text-emerald-900 text-xs font-black px-2.5 py-0.5 rounded-full mb-3 uppercase tracking-wider">
-                  Step 02
+                  Step 2
                 </div>
                 <h3 className="text-lg font-black text-slate-800 mb-2">Pay Securely Online</h3>
                 <p className="text-slate-600 text-sm leading-relaxed">
-                  Fast and secure payments. No need for cash.
+                  Make secure payments online.
                 </p>
               </div>
 
@@ -166,11 +166,11 @@ const CustomerDashboard = () => {
                   <span className="text-3xl">🍔</span>
                 </div>
                 <div className="bg-emerald-500/20 text-emerald-900 text-xs font-black px-2.5 py-0.5 rounded-full mb-3 uppercase tracking-wider">
-                  Step 03
+                  Step 3
                 </div>
                 <h3 className="text-lg font-black text-slate-800 mb-2">Enjoy Your Meal</h3>
                 <p className="text-slate-600 text-sm leading-relaxed">
-                  We'll notify you when it's ready. Just grab and go!
+                  Pick up your food when it is ready.
                 </p>
               </div>
 
@@ -185,7 +185,7 @@ const CustomerDashboard = () => {
             {/* Unified Header */}
             <div className="text-center max-w-2xl mx-auto mb-10">
               <span className="text-xs font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-800 px-3.5 py-1.5 rounded-full">
-                🍽️ Our Caterers
+                Our Caterers
               </span>
               <h2 className="text-4xl md:text-5xl font-black text-slate-900 mt-4 tracking-tight leading-none">
                 Caterings On Campus
@@ -230,16 +230,16 @@ const CustomerDashboard = () => {
         {/* === WHY CHOOSE US SECTION === */}
         <section className="bg-white/30 backdrop-blur-md rounded-2xl shadow-xl p-6 w-full max-w-4xl text-center border border-white/30 mb-10">
           <div className="container mx-auto max-w-5xl text-center">
-            <h2 className="text-3xl font-extrabold text-slate-900 mb-12">Why You'll Love Our Service</h2>
+            <h2 className="text-3xl font-extrabold text-slate-900 mb-12">Why Choose Us</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="bg-white/45 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm flex flex-col items-center text-center justify-center">
                 <div className="text-4xl mb-3">⚡</div>
-                <h3 className="text-slate-900 font-extrabold text-lg">Blazing Fast</h3>
+                <h3 className="text-slate-900 font-extrabold text-lg">Fast Service</h3>
                 <p className="text-slate-600 text-sm mt-1">Order in under a minute.</p>
               </div>
               <div className="bg-white/45 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm flex flex-col items-center text-center justify-center">
                 <div className="text-4xl mb-3"> 🍱 </div>
-                <h3 className="text-slate-900 font-extrabold text-lg">Great Variety</h3>
+                <h3 className="text-slate-900 font-extrabold text-lg">Menu Variety</h3>
                 <p className="text-slate-600 text-sm mt-1">All your campus favorites in one place.</p>
               </div>
               <div className="bg-white/45 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm flex flex-col items-center text-center justify-center">
@@ -249,7 +249,7 @@ const CustomerDashboard = () => {
               </div>
               <div className="bg-white/45 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm flex flex-col items-center text-center justify-center">
                 <div className="text-4xl mb-3">⭐</div>
-                <h3 className="text-slate-900 font-extrabold text-lg">Real Reviews</h3>
+                <h3 className="text-slate-900 font-extrabold text-lg">Ratings</h3>
                 <p className="text-slate-600 text-sm mt-1">See real-time ratings from students.</p>
               </div>
             </div>

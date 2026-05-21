@@ -68,13 +68,13 @@ function CustomerNavbar() {
             <ul
               tabIndex={0}
               className="menu menu-sm dropdown-content bg-white text-black rounded-box z-[1] mt-3 w-52 p-3 shadow-2xl border border-slate-100 space-y-1">
-              <li><a className="font-semibold py-2 hover:bg-slate-50 rounded-lg" onClick={()=>navigate("/customer")}>🏠 Homepage</a></li>
-              <li><a className="font-semibold py-2 hover:bg-slate-50 rounded-lg" onClick={()=>navigate("/customer/order-history")}>📜 Order History</a></li>
-              <li><a className="font-semibold py-2 hover:bg-slate-50 rounded-lg" onClick={()=>navigate("/profile")}>👤 Profile Portfolio</a></li>
+              <li><a className="font-semibold py-2 hover:bg-slate-50 rounded-lg" onClick={()=>navigate("/customer")}>Homepage</a></li>
+              <li><a className="font-semibold py-2 hover:bg-slate-50 rounded-lg" onClick={()=>navigate("/customer/order-history")}>Order History</a></li>
+              <li><a className="font-semibold py-2 hover:bg-slate-50 rounded-lg" onClick={()=>navigate("/profile")}>Profile</a></li>
             </ul>
           </div>
           <a className="text-3xl font-extrabold text-white cursor-pointer ml-4" onClick={()=>{navigate("/customer")}}>
-            QuickBites 🍔
+            QuickBite
           </a>
         </div>
         <div className="navbar-end">
@@ -115,11 +115,9 @@ function CustomerNavbar() {
         </div>
       </div>
 
-      {/* Premium Search Overlay Modal */}
       {isSearchOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex justify-center pt-20 px-4">
           <div className="bg-white/95 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col p-6 overflow-hidden animate-fade-in-up transition-all duration-300">
-            {/* Header */}
             <div className="flex items-center gap-3 border-b border-slate-150 pb-4 mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -162,19 +160,17 @@ function CustomerNavbar() {
               </button>
             </div>
 
-            {/* Results Body */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-6">
               {searching ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                  <span className="text-sm font-bold text-slate-500">Searching the campus...</span>
+                  <span className="text-sm font-bold text-slate-500">Searching...</span>
                 </div>
               ) : !searchQuery.trim() ? (
                 <div className="py-8 text-center">
-                  <div className="text-4xl mb-3">🔍</div>
-                  <h4 className="text-base font-black text-slate-800">Unified Campus Search</h4>
+                  <h4 className="text-base font-black text-slate-800">Search</h4>
                   <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
-                    Type below to instantly search through catering providers, active branches, specific building locations, or your favorite food dishes!
+                    Search for branches, caterings, locations, or dishes.
                   </p>
                   
                   <div className="mt-6 flex flex-wrap gap-2 justify-center px-4">
@@ -184,26 +180,24 @@ function CustomerNavbar() {
                         onClick={() => setSearchQuery(tag)}
                         className="px-3.5 py-1.5 bg-slate-100 hover:bg-green-50 hover:text-green-800 border border-slate-200/60 rounded-full text-xs font-bold text-slate-600 transition"
                       >
-                        #{tag}
+                        {tag}
                       </button>
                     ))}
                   </div>
                 </div>
               ) : (searchResults.caterings.length === 0 && searchResults.branches.length === 0 && searchResults.dishes.length === 0) ? (
                 <div className="py-12 text-center">
-                  <div className="text-4xl mb-3">🍽️💨</div>
-                  <h4 className="text-base font-black text-slate-800">No matches found</h4>
+                  <h4 className="text-base font-black text-slate-800">No results found</h4>
                   <p className="text-xs text-slate-500 mt-1">
-                    Try checking your spelling or search for something else.
+                    No items matched your search query.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Caterings Matches */}
                   {searchResults.caterings.length > 0 && (
                     <div>
                       <h4 className="text-xs font-black uppercase text-slate-500 tracking-wider mb-3 flex items-center gap-1.5">
-                        <span>🍽️ Caterings ({searchResults.caterings.length})</span>
+                        <span>Caterings ({searchResults.caterings.length})</span>
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {searchResults.caterings.map(c => (
@@ -235,11 +229,10 @@ function CustomerNavbar() {
                     </div>
                   )}
 
-                  {/* Branches & Locations Matches */}
                   {searchResults.branches.length > 0 && (
                     <div>
                       <h4 className="text-xs font-black uppercase text-slate-500 tracking-wider mb-3 flex items-center gap-1.5">
-                        <span>📍 Branches & Locations ({searchResults.branches.length})</span>
+                        <span>Branches & Locations ({searchResults.branches.length})</span>
                       </h4>
                       <div className="space-y-2">
                         {searchResults.branches.map(b => {
@@ -269,7 +262,7 @@ function CustomerNavbar() {
                                     {b.name} <span className="text-[10px] text-slate-500 font-bold">({b.cateringId?.name})</span>
                                   </span>
                                   <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
-                                    📍 Location: {b.location || 'On Campus'}
+                                    Location: {b.location || 'On Campus'}
                                   </span>
                                 </div>
                               </div>
@@ -285,11 +278,10 @@ function CustomerNavbar() {
                     </div>
                   )}
 
-                  {/* Dishes Matches */}
                   {searchResults.dishes.length > 0 && (
                     <div>
                       <h4 className="text-xs font-black uppercase text-slate-500 tracking-wider mb-3 flex items-center gap-1.5">
-                        <span>🍔 Dishes & Meals ({searchResults.dishes.length})</span>
+                        <span>Dishes ({searchResults.dishes.length})</span>
                       </h4>
                       <div className="space-y-3.5">
                         {searchResults.dishes.map(d => (
@@ -306,8 +298,8 @@ function CustomerNavbar() {
                                     className="w-12 h-12 rounded-xl object-cover bg-white border border-slate-200"
                                   />
                                 ) : (
-                                  <div className="w-12 h-12 rounded-xl bg-slate-200/60 flex items-center justify-center text-xl">
-                                    🍔
+                                  <div className="w-12 h-12 rounded-xl bg-slate-200/60 flex items-center justify-center text-sm font-bold">
+                                    Dish
                                   </div>
                                 )}
                                 <div>
@@ -315,7 +307,7 @@ function CustomerNavbar() {
                                     {d.name} <span className="text-[9px] uppercase bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full font-black ml-1.5">{d.category}</span>
                                   </span>
                                   <span className="text-xs text-slate-500 mt-1 block line-clamp-1">
-                                    {d.description || 'Freshly prepared campus specialty.'}
+                                    {d.description || 'Freshly prepared menu item.'}
                                   </span>
                                 </div>
                               </div>
@@ -324,10 +316,9 @@ function CustomerNavbar() {
                               </span>
                             </div>
 
-                            {/* Branches offering this dish */}
                             <div className="border-t border-slate-200/40 mt-1.5 pt-2 flex flex-col gap-1.5">
                               <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">
-                                Order directly from branch:
+                                Available at branch:
                               </span>
                               <div className="flex flex-wrap gap-1.5">
                                 {d.availability && d.availability.length > 0 ? (
@@ -358,7 +349,7 @@ function CustomerNavbar() {
                                   })
                                 ) : (
                                   <span className="text-[10px] text-slate-400 font-semibold italic">
-                                    Offline (Unavailable at all branches)
+                                    Unavailable
                                   </span>
                                 )}
                               </div>

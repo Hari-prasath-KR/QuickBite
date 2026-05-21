@@ -9,7 +9,7 @@ function MenuPageNavbar({ onAddItemClick }) {
         <div className="navbar bg-gradient-to-br from-green-500 via-green-400 to-yellow-200 shadow-lg overflow-visible mb-6">
             <div className="flex-1">
                 <a className="btn btn-ghost text-2xl text-white select-none hover:bg-transparent">
-                    📋 Menu Management
+                    Menu Management
                 </a>
             </div>
             <button onClick={onAddItemClick} className="btn btn-ghost border-white text-white hover:bg-white hover:text-green-600">
@@ -148,7 +148,7 @@ function ManageMenu() {
             <div className="mx-5 mb-8 p-5 bg-white/35 backdrop-blur-xl border border-white/30 rounded-3xl shadow-xl flex flex-col md:flex-row gap-6 items-center">
                 <div className="w-full md:w-auto flex flex-col gap-1.5 flex-1 md:max-w-xs">
                     <label htmlFor="category-filter" className="text-xs font-black uppercase tracking-widest text-slate-700 ml-1">
-                        🍽️ Filter by Category
+                        Filter by Category
                     </label>
                     <select
                         id="category-filter"
@@ -166,7 +166,7 @@ function ManageMenu() {
                 </div>
                 <div className="w-full md:w-auto flex flex-col gap-1.5 flex-1 md:max-w-xs">
                     <label htmlFor="branch-filter" className="text-xs font-black uppercase tracking-widest text-slate-700 ml-1">
-                        📍 Filter by Branch
+                        Filter by Branch
                     </label>
                     <select
                         id="branch-filter"

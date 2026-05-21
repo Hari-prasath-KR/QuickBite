@@ -25,7 +25,7 @@ const ProfilePage = () => {
   const [updating, setUpdating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('portfolio');
-  const [selectedPrefs, setSelectedPrefs] = useState(['Vegetarian 🌱', 'Spicy lover 🌶️']);
+  const [selectedPrefs, setSelectedPrefs] = useState(['Vegetarian', 'Spicy']);
   
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -136,7 +136,7 @@ const ProfilePage = () => {
     return (
       <div className="flex flex-col gap-4 justify-center items-center h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white font-sans">
         <Loader2 className="animate-spin text-emerald-600 h-12 w-12" />
-        <span className="text-slate-800 font-extrabold tracking-wide">Loading profile portfolio...</span>
+        <span className="text-slate-800 font-extrabold tracking-wide">Loading profile...</span>
       </div>
     );
   }
@@ -154,7 +154,7 @@ const ProfilePage = () => {
   if (points >= 1000) {
     tierName = "Platinum";
     tierColor = "text-violet-600 bg-violet-100/60 border-violet-300 font-extrabold";
-    nextTier = "Max Level 👑";
+    nextTier = "Max Level";
     pointsToNext = 0;
     progressPercentage = 100;
   } else if (points >= 500) {
@@ -242,11 +242,11 @@ const ProfilePage = () => {
             <div className="w-full grid grid-cols-2 gap-4 mt-8 border-t border-slate-900/10 pt-6">
               <div className="text-center">
                 <span className="block text-2xl font-black text-slate-800">{points}</span>
-                <span className="text-[10px] uppercase font-bold text-slate-600 tracking-wider">Loyalty Pts</span>
+                <span className="text-[10px] uppercase font-bold text-slate-600 tracking-wider">Loyalty Points</span>
               </div>
               <div className="text-center">
                 <span className={`block text-2xl font-black ${tierColor.split(" ")[0]}`}>{tierName}</span>
-                <span className="text-[10px] uppercase font-bold text-slate-600 tracking-wider">Tier level</span>
+                <span className="text-[10px] uppercase font-bold text-slate-600 tracking-wider">Tier Level</span>
               </div>
             </div>
             
@@ -274,7 +274,7 @@ const ProfilePage = () => {
                         : 'text-slate-500 hover:text-slate-700'
                     }`}
                   >
-                    {tab}
+                    {tab === 'portfolio' ? 'Profile' : tab === 'wallet' ? 'Wallet' : 'Preferences'}
                     {activeTab === tab && (
                       <span className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-green-400 rounded-full animate-scale-x" />
                     )}
@@ -312,27 +312,27 @@ const ProfilePage = () => {
                           <Trophy className="w-5 h-5" />
                         </div>
                         <div className="text-left">
-                          <span className="block text-xs uppercase font-extrabold text-slate-500 tracking-wider">Loyalty Milestone Tracker</span>
+                          <span className="block text-xs uppercase font-extrabold text-slate-500 tracking-wider">Loyalty Progress</span>
                           <span className="text-sm font-black text-slate-800">
                             {points >= 1000 
-                              ? "Ultimate Tier Unlocked! 👑" 
-                              : `Next Tier Target: ${nextTier}`}
+                              ? "Platinum Tier Achieved" 
+                              : `Next Tier: ${nextTier}`}
                           </span>
                         </div>
                       </div>
                       <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full uppercase tracking-wider">
-                        Active Quest
+                        Loyalty Program
                       </span>
                     </div>
 
                     {/* Progress Slider */}
                     <div className="w-full mt-1">
                       <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
-                        <span>Current: {points} pts</span>
+                        <span>Current: {points} points</span>
                         <span>
                           {points >= 1000 
-                            ? "1000+ pts" 
-                            : `Goal: ${points + pointsToNext} pts`}
+                            ? "1000+ points" 
+                            : `Goal: ${points + pointsToNext} points`}
                         </span>
                       </div>
                       <div className="w-full bg-slate-200/50 rounded-full h-3 overflow-hidden border border-white/30">
@@ -344,8 +344,8 @@ const ProfilePage = () => {
                     </div>
 
                     <p className="text-[10px] text-slate-600 font-semibold leading-relaxed">
-                      🔥 Each campus order boosts your portfolio by **10 points**. 
-                      {points < 1000 && ` Just ${pointsToNext / 10} more orders needed to claim your shiny new ${nextTier} status!`}
+                      Earn 10 loyalty points on every order. 
+                      {points < 1000 && ` Place ${pointsToNext / 10} more orders to reach ${nextTier} tier.`}
                     </p>
                   </div>
                   
@@ -363,7 +363,7 @@ const ProfilePage = () => {
                         className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition duration-300 shadow-md hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
                       >
                         <ShoppingBag className="w-4 h-4" />
-                        Order History 📜
+                        Order History
                       </button>
                     )}
                   </div>
@@ -374,9 +374,9 @@ const ProfilePage = () => {
                 <div className="space-y-6 text-left">
                   <div>
                     <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                      <CreditCard className="text-emerald-500 w-5 h-5" /> QuickBite Pay Wallet
+                      <CreditCard className="text-emerald-500 w-5 h-5" /> Wallet Balance
                     </h3>
-                    <p className="text-xs text-slate-600">Simulated corporate and campus dynamic wallet.</p>
+                    <p className="text-xs text-slate-600">Manage your wallet balance.</p>
                   </div>
                   
                   {/* Credit Card UI */}
@@ -387,7 +387,7 @@ const ProfilePage = () => {
                     
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest block">QuickBite Wallet Card</span>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest block">QuickBite Card</span>
                         <span className="text-2xl font-black mt-1 block">₹{walletAmount.toLocaleString("en-IN")}.00</span>
                       </div>
                       <span className="text-xl font-extrabold italic tracking-tight text-yellow-400">QuickBite</span>
@@ -408,24 +408,24 @@ const ProfilePage = () => {
                   {/* Dynamic Wallet Rewards Breakdown */}
                   <div className="bg-white/45 border border-white/20 p-5 rounded-2xl shadow-sm flex flex-col gap-2.5">
                     <div className="flex justify-between items-center text-xs font-black uppercase text-slate-500 tracking-wider">
-                      <span>Dynamic Credits Summary</span>
+                      <span>Wallet Summary</span>
                       <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[9px]">
-                        <Gift className="w-3 h-3" /> Auto-Reload Active
+                        <Gift className="w-3 h-3" /> Wallet Active
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-sm font-bold text-slate-700">
-                      <span>Starter Campus Credit</span>
+                      <span>Starter Credit</span>
                       <span>₹500.00</span>
                     </div>
                     <div className="flex justify-between items-center text-sm font-bold text-emerald-700">
-                      <span>Order Loyalty Bonus (₹50 per 10 orders)</span>
+                      <span>Loyalty Bonus (₹50 per 10 orders)</span>
                       <span>+₹{Math.floor(orderCount / 10) * 50}.00</span>
                     </div>
                     
                     <div className="border-t border-slate-200/60 mt-2 pt-2.5 flex justify-between items-center text-[10px] text-slate-500 font-bold">
                       <span>Total orders placed: {orderCount}</span>
                       <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-                        {10 - (orderCount % 10)} orders left for next reward
+                        {10 - (orderCount % 10)} orders remaining for next bonus
                       </span>
                     </div>
                   </div>
@@ -436,13 +436,13 @@ const ProfilePage = () => {
                 <div className="space-y-6 text-left animate-fade-in-up">
                   <div>
                     <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                      <Award className="text-emerald-500 w-5 h-5" /> Dining Preferences
+                      <Award className="text-emerald-500 w-5 h-5" /> Dietary Preferences
                     </h3>
-                    <p className="text-xs text-slate-600">Customize your catering diet and allergies settings.</p>
+                    <p className="text-xs text-slate-600">Customize your dietary preferences.</p>
                   </div>
                   
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {['Vegetarian 🌱', 'Vegan 🌿', 'Gluten-Free 🌾', 'Dairy-Free 🥛', 'Halal 🕌', 'Nut-Free 🥜', 'Spicy lover 🌶️', 'Dessert fanatic 🍰'].map((pref) => {
+                    {['Vegetarian', 'Vegan', 'Gluten-Free', 'Dairy-Free', 'Halal', 'Nut-Free', 'Spicy', 'Desserts'].map((pref) => {
                       const isSelected = selectedPrefs.includes(pref);
                       return (
                         <button
@@ -462,7 +462,7 @@ const ProfilePage = () => {
                   
                   <div className="bg-white/45 border border-white/20 p-4 rounded-2xl shadow-sm">
                     <p className="text-xs text-slate-600 font-semibold leading-relaxed">
-                      💡 These preferences will be highlighted on food items when you browse menus, helping you choose the perfect campus meal in seconds!
+                      These preferences will help highlight relevant menu items during ordering.
                     </p>
                   </div>
                 </div>
@@ -470,7 +470,7 @@ const ProfilePage = () => {
             </div>
             
             <p className="text-[10px] text-slate-500 font-semibold mt-8 text-center md:text-left">
-              🔒 QuickBite Student Account Portfolio Portal. All data securely stored on-campus.
+              QuickBite Student Account
             </p>
           </div>
         </div>
@@ -489,7 +489,7 @@ const ProfilePage = () => {
             
             <div className="mb-6 text-left">
               <h3 className="text-2xl font-black text-slate-800">Edit Profile Details</h3>
-              <p className="text-xs text-slate-500 mt-1">Keep your campus credentials up to date.</p>
+              <p className="text-xs text-slate-500 mt-1">Update your name and email.</p>
             </div>
             
             <form onSubmit={handleUpdateProfile} className="space-y-4 text-left">

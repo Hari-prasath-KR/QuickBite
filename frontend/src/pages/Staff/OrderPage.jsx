@@ -303,10 +303,10 @@ function OrderPage() {
         <div className="flex flex-wrap justify-between items-center gap-4 bg-white/45 backdrop-blur-md border border-white/35 rounded-3xl p-6 shadow-xl">
           <div>
             <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-              <MdOutlineReorder className="text-green-600" /> Today's Orders
+              <MdOutlineReorder className="text-green-600" /> Orders
             </h1>
             <p className="text-sm font-semibold text-slate-500 mt-1">
-              Live dashboard for all branch order workflows
+              View and manage customer orders.
             </p>
           </div>
           <button
@@ -322,7 +322,7 @@ function OrderPage() {
         {loading ? (
           <div className="text-center py-20 bg-white/35 backdrop-blur-xl border border-white/30 rounded-3xl shadow-xl">
             <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-green-500 border-t-transparent mb-4"></div>
-            <p className="text-lg font-black text-slate-700">Loading today's orders...</p>
+            <p className="text-lg font-black text-slate-700">Loading orders...</p>
           </div>
         ) : (
           <>
@@ -406,7 +406,7 @@ function OrderPage() {
               <FaSearch className="absolute left-7 text-slate-400 text-lg" />
               <input
                 type="text"
-                placeholder="Search by customer name, table number, or items..."
+                placeholder="Search orders..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white/70 border border-slate-200 rounded-xl py-3 pl-12 pr-4 font-semibold text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
@@ -417,16 +417,14 @@ function OrderPage() {
             <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-3xl shadow-xl p-8 transition-all">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-                  <span>🍽️</span> {statusFilter === "All" ? "All" : statusFilter} Orders ({filteredOrders.length})
+                  {statusFilter} Orders ({filteredOrders.length})
                 </h2>
                 <div className="w-16 h-1 bg-gradient-to-r from-emerald-500 to-green-400 rounded-full shadow-sm"></div>
               </div>
 
               {filteredOrders.length === 0 ? (
                 <div className="text-center py-20">
-                  <p className="text-5xl mb-4">📜</p>
-                  <p className="text-lg font-black text-slate-600">No orders match the current criteria.</p>
-                  <p className="text-sm font-semibold text-slate-400 mt-1">Try resetting the status filter or search query</p>
+                  <p className="text-lg font-bold text-slate-500">No orders found.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -486,9 +484,8 @@ function OrderPage() {
                               <button
                                 onClick={() => handleQuickStatusUpdate(order._id, order.status, "cancel")}
                                 className="flex-1 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold text-xs rounded-xl transition shadow-sm flex items-center justify-center gap-1.5 active:scale-95"
-                                title="Cancel Order"
                               >
-                                <FaBan className="text-[10px]" /> Cancel
+                                Cancel
                               </button>
 
                               <button
@@ -496,13 +493,13 @@ function OrderPage() {
                                 className="flex-[2] py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition shadow-sm flex items-center justify-center gap-1.5 active:scale-95"
                               >
                                 {statusVal === "pending" && (
-                                  <>👩‍🍳 Cook</>
+                                  <>Prepare</>
                                 )}
                                 {(statusVal === "in progress" || statusVal === "preparing") && (
-                                  <>🔔 Mark Ready</>
+                                  <>Mark Ready</>
                                 )}
                                 {(statusVal === "ready for service" || statusVal === "ready") && (
-                                  <>✅ Complete</>
+                                  <>Complete</>
                                 )}
                                 <FaArrowRight className="text-[9px]" />
                               </button>

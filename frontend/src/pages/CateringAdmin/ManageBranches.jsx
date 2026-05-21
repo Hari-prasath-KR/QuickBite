@@ -11,7 +11,7 @@ import UpdateBranchModal from './UpdateBranchModels';
     <div className="navbar bg-gradient-to-br from-green-500 via-green-400 to-yellow-200 shadow-lg overflow-visible">
       <div className="flex-1">
         <a className="btn btn-ghost text-2xl text-white  select-none hover:bg-transparent">
-           🏢 Branch Directory
+           Branch Directory
         </a>
       </div>
       <div className="flex-none dropdown dropdown-end z-50">
@@ -31,7 +31,7 @@ import UpdateBranchModal from './UpdateBranchModels';
           </svg>
         </label>
         <ul tabIndex={0} className="menu dropdown-content mt-3 p-2 shadow bg-white rounded-box w-52">
-          <li><button onClick={() => navigate("/catering/add-branch")} className="w-full text-black text-left p-2 hover:bg-gray-100 rounded-lg"> ➕ Add Branch </button> </li>
+          <li><button onClick={() => navigate("/catering/add-branch")} className="w-full text-black text-left p-2 hover:bg-gray-100 rounded-lg"> Add Branch </button> </li>
           {/* //<li> <button onClick={() => navigate("/catering/update-catering")} className="w-full text-black text-left p-2 hover:bg-gray-100 rounded-lg"> ✏️ Update Catering </button> </li> */}
         </ul>
       </div>
@@ -50,11 +50,11 @@ const BranchCard = ({ branch, onDelete, onUpdate }) => {
             {branch.status}
           </span>
         </div>
-        <p className="text-slate-700 text-sm font-medium flex items-center gap-1.5">
-          <span>📍</span> {branch.location || "No address provided"}
+        <p className="text-slate-700 text-sm font-medium">
+          Location: {branch.location || "No address provided"}
         </p>
-        <p className="text-slate-500 text-xs mt-1.5 font-semibold flex items-center gap-1.5">
-          <span>📞</span> {branch.phone || "No phone provided"}
+        <p className="text-slate-500 text-xs mt-1.5 font-semibold">
+          Phone: {branch.phone || "No phone provided"}
         </p>
       </div>
       <div className="mt-6 flex gap-3"> 
@@ -151,8 +151,8 @@ function ManageBranches() {
       </div>
       <div className="pt-20 p-8">
         <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-3xl shadow-xl p-8 transition-all duration-500">
-          <h2 className="text-3xl font-black text-slate-900 mb-6 tracking-tight flex items-center gap-2">
-            <span>📍</span> Our Branches
+          <h2 className="text-3xl font-black text-slate-900 mb-6 tracking-tight">
+            Our Branches
           </h2>
           <div className="w-20 h-1.5 bg-gradient-to-r from-emerald-500 to-green-400 mb-8 rounded-full shadow-sm"></div>
           
