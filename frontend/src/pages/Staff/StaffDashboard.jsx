@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import StaffNavbar from "../../components/StaffNavbar"; // Import your separate StaffNavbar
 import BottomNav from "./BottomNav"; // Import your separate BottomNav
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const ClockIcon = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -56,6 +57,244 @@ const StatCard = ({ title, value, change, icon, iconBgColor }) => (
   </div>
 );
 
+const STEPS = [
+  { label: "Pending", icon: "⏳" },
+  { label: "Preparing", icon: "🍳" },
+  { label: "Ready", icon: "🔔" },
+  { label: "Completed", icon: "✓" }
+];
+
+const getActiveStep = (status) => {
+  const s = String(status).toLowerCase();
+  if (s === "pending") return 0;
+  if (s === "in progress" || s === "preparing") return 1;
+  if (s === "ready" || s === "ready for service") return 2;
+  if (s === "completed") return 3;
+  return -1;
+};
+
+const OrderStepper = ({ status }) => {
+  const activeStep = getActiveStep(status);
+
+  if (activeStep === -1) return null;
+
+  return (
+    <div className="w-full py-4 px-2 overflow-x-auto scrollbar-none">
+      <div className="relative flex justify-between items-center w-full min-w-[300px] md:min-w-0">
+        {/* Connection line background */}
+        <div className="absolute top-5 left-0 right-0 h-1 bg-slate-100 rounded-full z-0"></div>
+
+        {/* Dynamic completed line */}
+        <div
+          className="absolute top-5 left-0 h-1 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full transition-all duration-700 ease-out z-0"
+          style={{ width: `${(activeStep / (STEPS.length - 1)) * 100}%` }}
+        ></div>
+
+        {/* Interactive nodes */}
+        {STEPS.map((step, idx) => {
+          const isCompleted = idx < activeStep;
+          const isActive = idx === activeStep;
+          const isPending = idx > activeStep;
+
+          let circleStyle = "";
+          let textStyle = "";
+
+          if (isCompleted) {
+            circleStyle = "bg-emerald-500 text-white border-emerald-500 scale-105 shadow-md shadow-emerald-100";
+            textStyle = "text-emerald-600 font-extrabold";
+          } else if (isActive) {
+            circleStyle = "bg-white text-emerald-600 border-emerald-500 shadow-lg ring-4 ring-emerald-50 scale-115 animate-pulse";
+            textStyle = "text-slate-800 font-black scale-105";
+          } else {
+            circleStyle = "bg-white text-slate-400 border-slate-200 shadow-sm";
+            textStyle = "text-slate-400 font-medium";
+          }
+
+          return (
+            <div key={idx} className="flex flex-col items-center relative z-10 select-none flex-1">
+              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${circleStyle}`}>
+                <span className="text-xs">{step.icon}</span>
+              </div>
+              <span className={`text-[9px] md:text-xs mt-2 text-center tracking-wider transition-all duration-500 whitespace-nowrap ${textStyle}`}>
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const CollectPaymentModal = ({ order, onClose, onConfirm }) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleConfirm = async (method) => {
+    setSubmitting(true);
+    try {
+      await onConfirm(method);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const grandTotal = (order.total * 1.05).toFixed(2);
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl border border-slate-100 relative animate-scaleUp">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          disabled={submitting}
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition cursor-pointer"
+        >
+          ✕
+        </button>
+
+        {/* Header Icon */}
+        <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100">
+          <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center text-3xl shadow-inner mb-3">
+            💵
+          </div>
+          <h3 className="text-xl font-black text-slate-800 tracking-tight">Confirm Payment Collection</h3>
+          <p className="text-slate-500 text-xs mt-1 max-w-xs">
+            This order is currently unpaid. Please confirm that you have collected the full amount at the counter before completing delivery.
+          </p>
+        </div>
+
+        {/* Order Info & Total */}
+        <div className="my-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm space-y-2">
+          <div className="flex justify-between text-slate-500">
+            <span>Customer:</span>
+            <span className="font-extrabold text-slate-800">{order.userId?.name || order.customerName || "Guest"}</span>
+          </div>
+          <div className="flex justify-between text-slate-500">
+            <span>Order Type:</span>
+            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider">
+              {order.payment?.method === "PayLater" ? "⏱ Pay Later at Counter" : "💵 Cash Payment"}
+            </span>
+          </div>
+          <div className="flex justify-between text-base font-extrabold text-slate-800 pt-2 border-t border-dashed border-slate-200">
+            <span>Grand Total Due:</span>
+            <span className="text-emerald-600 text-lg">₹{grandTotal}</span>
+          </div>
+        </div>
+
+        {/* Action Choices */}
+        <div className="space-y-3">
+          <button
+            onClick={() => handleConfirm("Cash")}
+            disabled={submitting}
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 cursor-pointer"
+          >
+            <span>💵</span>
+            {submitting ? "Processing..." : "Cash Collected at Counter"}
+          </button>
+          
+          <button
+            onClick={() => handleConfirm("Online")}
+            disabled={submitting}
+            className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 cursor-pointer"
+          >
+            <span>📱</span>
+            {submitting ? "Processing..." : "UPI / Card Received at Counter"}
+          </button>
+
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl transition flex items-center justify-center active:scale-98 disabled:opacity-50 cursor-pointer"
+          >
+            Cancel & Keep Unpaid
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Token Verification Modal Component
+const TokenVerificationModal = ({ tokenNumber, onClose, onConfirm }) => {
+  const [inputToken, setInputToken] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const expected = String(tokenNumber || "").trim().toUpperCase();
+    const entered = String(inputToken).trim().toUpperCase();
+
+    if (entered === expected || entered === expected.replace("TK-", "")) {
+      onConfirm();
+    } else {
+      setError(`Verification failed! Expected "${expected}"`);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[120] flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl max-w-sm w-full p-6 md:p-8 shadow-2xl border border-slate-100 relative animate-scaleUp text-gray-800 text-center">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          type="button"
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition cursor-pointer font-bold"
+        >
+          ✕
+        </button>
+
+        {/* Header Icon */}
+        <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-3xl shadow-inner mb-3">
+            🔑
+          </div>
+          <h3 className="text-xl font-black text-slate-800 tracking-tight">Verify Order Token</h3>
+          <p className="text-slate-500 text-xs mt-1 max-w-xs">
+            Ask the customer for their secure Order Token and enter it below to authorize delivery completion.
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div>
+            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5">
+              Customer Token ID
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. TK-ABCD"
+              value={inputToken}
+              onChange={(e) => {
+                setInputToken(e.target.value);
+                setError("");
+              }}
+              className="w-full bg-slate-50 border border-slate-205 rounded-2xl py-3 px-4 text-center text-xl font-black tracking-widest text-slate-850 uppercase focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              autoFocus
+            />
+          </div>
+
+          {error && (
+            <p className="text-rose-600 text-xs font-extrabold animate-bounce">
+              ❌ {error}
+            </p>
+          )}
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+            >
+              Verify & Complete Order
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
   const statusOptions = [
     "Pending",
@@ -67,6 +306,10 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
 
   const [newStatus, setNewStatus] = useState(order.status);
   const [loading, setLoading] = useState(false);
+  const [showPaymentCollect, setShowPaymentCollect] = useState(false);
+  const [pendingCompleteData, setPendingCompleteData] = useState(null);
+  const [showTokenVerify, setShowTokenVerify] = useState(false);
+  const [expectedToken, setExpectedToken] = useState("");
 
   const getStatusColor = (status) => {
     switch (String(status).toLowerCase()) {
@@ -81,11 +324,38 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
 
   const normalizeStatusForApi = (label) => label.toLowerCase();
 
-  const handleSave = async () => {
+  const handleSave = async (enforcedMethod = null, tokenVerified = false) => {
+    const payloadStatus = normalizeStatusForApi(newStatus);
+    let paymentData = null;
+
+    if (payloadStatus === "completed" && !order.payment?.paid && !enforcedMethod && !tokenVerified && !pendingCompleteData?.paymentSuccessData) {
+      setShowPaymentCollect(true);
+      return;
+    }
+
     setLoading(true);
     try {
-     
-      const payloadStatus = normalizeStatusForApi(newStatus);
+      if (enforcedMethod) {
+        const payRes = await axios.put(
+          `http://localhost:5001/api/order/${order._id}/payment-success`,
+          { method: enforcedMethod },
+          { withCredentials: true }
+        );
+        toast.success("Payment marked as successful!");
+        paymentData = payRes.data;
+      }
+
+      if (payloadStatus === "completed" && !tokenVerified) {
+        const activeToken = paymentData?.tokenNumber || order.tokenNumber || `TK-${order._id.substring(order._id.length - 4).toUpperCase()}`;
+        setExpectedToken(activeToken);
+        setPendingCompleteData({ paymentSuccessData: paymentData });
+        setShowTokenVerify(true);
+        setLoading(false);
+        return;
+      }
+
+      const targetPaymentData = pendingCompleteData?.paymentSuccessData || paymentData;
+
       const res = await axios.put(
         `http://localhost:5001/api/order/${order._id}/status`,
         { status: payloadStatus },
@@ -93,13 +363,12 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
       );
 
       console.log("Status Updated:", res.data);
-
-      
-      if (onStatusUpdated) onStatusUpdated(order._id, newStatus);
+      toast.success("Order status updated successfully!");
+      if (onStatusUpdated) onStatusUpdated(order._id, newStatus, targetPaymentData);
       onClose();
     } catch (err) {
       console.error("Error updating status", err);
-      alert("Failed to update status. Check backend or network.");
+      toast.error("Failed to update status.");
     } finally {
       setLoading(false);
     }
@@ -114,12 +383,29 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-black/40 p-4">
-      <div className="bg-white/90 rounded-2xl shadow-2xl border border-gray-300 w-full max-w-4xl overflow-hidden flex flex-col animate-fadeIn">
-        <div className="p-6 border-b bg-gradient-to-r from-yellow-500 to-yellow-600 flex justify-between items-center text-white">
+      <div className="bg-white/95 rounded-2xl shadow-2xl border border-gray-300 w-full max-w-4xl overflow-hidden flex flex-col animate-fadeIn relative">
+        <div className="p-6 border-b bg-gradient-to-r from-yellow-500 to-yellow-600 flex justify-between items-center text-white shrink-0">
           <h2 className="text-2xl font-extrabold">Order Details • Table {order.table || "N/A"}</h2>
           <button onClick={onClose} className="hover:scale-110 transition">
             <XMarkIcon className="h-7 w-7 text-white" />
           </button>
+        </div>
+
+        {/* Dynamic Horizontal Progress Stepper */}
+        <div className="bg-slate-50 p-4 border-b border-gray-200 shrink-0">
+          {String(order.status).toLowerCase() === "cancelled" ? (
+            <div className="w-full bg-rose-50 border border-rose-100 text-rose-800 rounded-xl p-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5">
+                <span className="text-lg">🛑</span>
+                <div>
+                  <h4 className="font-extrabold text-xs uppercase tracking-wider text-rose-900">Cancelled</h4>
+                  <p className="text-rose-500 text-[10px] mt-0.5 font-semibold font-mono">This order was cancelled by the staff.</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <OrderStepper status={order.status} />
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 flex-grow overflow-y-auto">
@@ -148,8 +434,25 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
           <div className="md:col-span-1 p-6 space-y-6">
             <div>
               <h3 className="text-xl font-semibold text-gray-800 mb-2">Current Status</h3>
-              <span className={`text-lg font-bold px-4 py-2 rounded-full border ${getStatusColor(order.status)}`}>
+              <span className={`text-lg font-bold px-4 py-2 rounded-full border whitespace-nowrap inline-block ${getStatusColor(order.status)}`}>
                 {order.status}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">Payment Status</h3>
+              <span className={`px-4 py-2 border text-xs font-black rounded-full uppercase tracking-wider whitespace-nowrap block text-center ${
+                order.payment?.paid
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : order.payment?.method === "PayLater"
+                  ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                  : "bg-red-50 text-red-700 border-red-200"
+              }`}>
+                {order.payment?.paid
+                  ? "💳 Paid Online"
+                  : order.payment?.method === "PayLater"
+                  ? "⏱ Pay Later at Counter"
+                  : "💵 Unpaid"}
               </span>
             </div>
 
@@ -169,7 +472,7 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
             </div>
 
             <button
-              onClick={handleSave}
+              onClick={() => handleSave()}
               disabled={newStatus === order.status || loading}
               className={`w-full py-3 rounded-xl font-bold tracking-wide transition-all duration-200 ${
                 newStatus === order.status || loading ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-yellow-500 text-white hover:bg-yellow-600 hover:shadow-lg"
@@ -180,6 +483,29 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
           </div>
         </div>
       </div>
+      {showPaymentCollect && (
+        <CollectPaymentModal
+          order={order}
+          onClose={() => setShowPaymentCollect(false)}
+          onConfirm={async (method) => {
+            await handleSave(method);
+            setShowPaymentCollect(false);
+          }}
+        />
+      )}
+      {showTokenVerify && (
+        <TokenVerificationModal
+          tokenNumber={expectedToken}
+          onClose={() => {
+            setShowTokenVerify(false);
+            setPendingCompleteData(null);
+          }}
+          onConfirm={async () => {
+            setShowTokenVerify(false);
+            await handleSave(null, true);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -199,10 +525,10 @@ const RecentOrders = ({ orders, onOrderClick }) => {
 
   const getStatusClass = (status) =>
     String(status).toLowerCase().includes("completed")
-      ? "text-green-600 bg-green-100"
+      ? "text-green-600 bg-green-100 border-green-200"
       : String(status).toLowerCase().includes("pending")
-      ? "text-red-600 bg-red-100"
-      : "text-yellow-600 bg-yellow-100";
+      ? "text-red-600 bg-red-100 border-red-200"
+      : "text-yellow-600 bg-yellow-100 border-yellow-250";
 
   const handleViewToggle = (e) => {
     e.preventDefault();
@@ -230,20 +556,35 @@ const RecentOrders = ({ orders, onOrderClick }) => {
           <li
             key={order._id || index}
             onClick={() => onOrderClick(order)}
-            className="flex flex-wrap justify-between items-center p-3 bg-gray-50 rounded-md transition-colors hover:bg-yellow-100/50 cursor-pointer border border-gray-200"
+            className="flex flex-wrap justify-between items-center p-3.5 bg-gray-50 rounded-xl transition-colors hover:bg-yellow-100/50 cursor-pointer border border-gray-200 gap-3"
           >
-            <div className="flex items-center space-x-4 mb-2 sm:mb-0">
-              <div className="w-10 h-10 bg-yellow-400 rounded-md flex items-center justify-center font-bold text-white shadow-md">
-                {order.name?.substring(0, 2).toUpperCase()}
+            <div className="flex items-center space-x-4 min-w-0 flex-1 sm:flex-initial">
+              <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center font-black text-white shadow-md flex-shrink-0">
+                {order.customerName ? order.customerName.substring(0, 2).toUpperCase() : (order.userId?.name || "GS").substring(0, 2).toUpperCase()}
               </div>
-              <div>
-                <p className="font-semibold text-gray-800">{order.name}</p>
-                <p className="text-xs text-gray-500">{order.items?.length || 0} items</p>
+              <div className="min-w-0">
+                <p className="font-extrabold text-gray-800 truncate max-w-[140px] sm:max-w-[200px]">{order.customerName || order.userId?.name || "Guest"}</p>
+                <p className="text-xs text-slate-500 font-semibold">{order.items?.length || 0} items • Table {order.table || "N/A"}</p>
               </div>
             </div>
 
-            <div className={`flex items-center space-x-2 text-sm font-semibold px-3 py-1 rounded-full ${getStatusClass(order.status)}`}>
-              <span>{order.status}</span>
+            <div className="flex items-center space-x-3 flex-wrap sm:flex-nowrap gap-y-2">
+              <span className={`px-2.5 py-0.5 border text-[10px] font-black rounded-full uppercase tracking-wider whitespace-nowrap ${
+                order.payment?.paid
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : order.payment?.method === "PayLater"
+                  ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                  : "bg-red-50 text-red-700 border-red-200"
+              }`}>
+                {order.payment?.paid
+                  ? "💳 Paid"
+                  : order.payment?.method === "PayLater"
+                  ? "⏱ Pay Later"
+                  : "💵 Unpaid"}
+              </span>
+              <div className={`flex items-center text-xs font-black px-3 py-1 rounded-full border whitespace-nowrap ${getStatusClass(order.status)}`}>
+                <span>{order.status}</span>
+              </div>
             </div>
           </li>
         ))}
@@ -330,10 +671,19 @@ const StaffDashboard = () => {
   const formattedDate = time.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   
-  const handleUpdateOrderStatus = async (orderId, newStatusLabel) => {
+  const handleUpdateOrderStatus = (orderId, newStatusLabel, paymentData = null) => {
     setRecentOrders(prev =>
       prev
-        .map(order => (order._id === orderId ? { ...order, status: newStatusLabel } : order))
+        .map(order => {
+          if (order._id === orderId) {
+            const updated = { ...order, status: newStatusLabel };
+            if (paymentData) {
+              return { ...updated, ...paymentData };
+            }
+            return updated;
+          }
+          return order;
+        })
         .filter(order => {
           const s = String(order.status).toLowerCase();
           return s !== "completed" && s !== "cancelled";
@@ -341,15 +691,6 @@ const StaffDashboard = () => {
     );
 
     setSelectedOrder(null);
-
-    const payloadStatus = String(newStatusLabel).toLowerCase();
-
-    try {
-      await axios.put(`http://localhost:5001/api/order/${orderId}/status`, { status: payloadStatus }, { withCredentials: true });
-    } catch (err) {
-      console.error("Error updating order status", err);
-      alert("Failed to update order status. Please check the network and try again.");
-    }
   };
 
   useEffect(() => {

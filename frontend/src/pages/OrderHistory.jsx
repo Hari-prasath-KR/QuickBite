@@ -3,6 +3,75 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import CustomerNavbar from "../components/CustomerNavbar";
 
+const STEPS = [
+  { label: "Pending", icon: "⏳" },
+  { label: "Preparing", icon: "🍳" },
+  { label: "Ready", icon: "🔔" },
+  { label: "Completed", icon: "✓" }
+];
+
+const getActiveStep = (status) => {
+  const s = String(status).toLowerCase();
+  if (s === "pending") return 0;
+  if (s === "in progress" || s === "preparing") return 1;
+  if (s === "ready" || s === "ready for service") return 2;
+  if (s === "completed") return 3;
+  return -1;
+};
+
+const OrderStepper = ({ status }) => {
+  const activeStep = getActiveStep(status);
+
+  if (activeStep === -1) return null;
+
+  return (
+    <div className="w-full py-4 px-2 overflow-x-auto scrollbar-none">
+      <div className="relative flex justify-between items-center w-full min-w-[340px] md:min-w-0">
+        {/* Connection line background */}
+        <div className="absolute top-5 left-0 right-0 h-1 bg-slate-100 rounded-full z-0"></div>
+
+        {/* Dynamic completed line */}
+        <div
+          className="absolute top-5 left-0 h-1 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full transition-all duration-700 ease-out z-0"
+          style={{ width: `${(activeStep / (STEPS.length - 1)) * 100}%` }}
+        ></div>
+
+        {/* Interactive nodes */}
+        {STEPS.map((step, idx) => {
+          const isCompleted = idx < activeStep;
+          const isActive = idx === activeStep;
+          const isPending = idx > activeStep;
+
+          let circleStyle = "";
+          let textStyle = "";
+
+          if (isCompleted) {
+            circleStyle = "bg-emerald-500 text-white border-emerald-500 scale-105 shadow-md shadow-emerald-100";
+            textStyle = "text-emerald-600 font-extrabold";
+          } else if (isActive) {
+            circleStyle = "bg-white text-emerald-600 border-emerald-500 shadow-lg ring-4 ring-emerald-50 scale-115 animate-pulse";
+            textStyle = "text-slate-800 font-black scale-105";
+          } else {
+            circleStyle = "bg-white text-slate-400 border-slate-200 shadow-sm";
+            textStyle = "text-slate-400 font-medium";
+          }
+
+          return (
+            <div key={idx} className="flex flex-col items-center relative z-10 select-none flex-1">
+              <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${circleStyle}`}>
+                <span className="text-base">{step.icon}</span>
+              </div>
+              <span className={`text-[10px] md:text-xs mt-2 text-center tracking-wider transition-all duration-500 whitespace-nowrap ${textStyle}`}>
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const OrderHistory = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -38,14 +107,20 @@ const OrderHistory = () => {
   };
 
   const getStatusBadgeClass = (status) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      case "preparing":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      default:
-        return "bg-amber-100 text-amber-800 border-amber-200";
+    const s = String(status).toLowerCase();
+    if (s === "completed") {
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
     }
+    if (s === "in progress" || s === "preparing") {
+      return "bg-amber-50 text-amber-700 border-amber-200 animate-pulse";
+    }
+    if (s === "ready for service" || s === "ready") {
+      return "bg-sky-50 text-sky-700 border-sky-200";
+    }
+    if (s === "cancelled") {
+      return "bg-slate-100 text-slate-600 border-slate-200";
+    }
+    return "bg-rose-50 text-rose-700 border-rose-200";
   };
 
   if (loading) {
@@ -103,29 +178,56 @@ const OrderHistory = () => {
               >
                 {/* Order Meta & Items */}
                 <div className="flex-1 space-y-4">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="px-3 py-1 font-bold text-xs uppercase bg-slate-100 text-slate-700 rounded-full">
-                      Ref: {order._id.substring(order._id.length - 8).toUpperCase()}
-                    </span>
-                    <span className={`px-3 py-1 border text-xs font-bold rounded-full uppercase ${getStatusBadgeClass(order.status)}`}>
-                      {order.status}
-                    </span>
-                    <span className={`px-3 py-1 border text-xs font-bold rounded-full uppercase ${
-                      order.payment?.paid
-                        ? "bg-green-50 text-green-700 border-green-200"
-                        : order.payment?.method === "PayLater"
-                        ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
-                        : "bg-red-50 text-red-700 border-red-200"
-                    }`}>
-                      {order.payment?.paid
-                        ? "Paid Online"
-                        : order.payment?.method === "PayLater"
-                        ? "⏱ Pay Later at Counter"
-                        : "Unpaid"}
-                    </span>
-                    <span className="text-slate-400 text-xs font-semibold font-mono">
-                      {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
+                    {/* Left: Ref & Date */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="px-3 py-1 font-bold text-xs uppercase bg-slate-100 text-slate-700 rounded-full">
+                        Ref: {order._id.substring(order._id.length - 8).toUpperCase()}
+                      </span>
+                      <span className="text-slate-400 text-xs font-semibold font-mono">
+                        📅 {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    {/* Right: Badges */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-3 py-1 border text-xs font-black rounded-full uppercase tracking-wider ${getStatusBadgeClass(order.status)}`}>
+                        {order.status}
+                      </span>
+                      <span className={`px-3 py-1 border text-xs font-black rounded-full uppercase tracking-wider ${
+                        order.payment?.paid
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : order.payment?.method === "PayLater"
+                          ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                          : "bg-red-50 text-red-700 border-red-200"
+                      }`}>
+                        {order.payment?.paid
+                          ? "💳 Paid Online"
+                          : order.payment?.method === "PayLater"
+                          ? "⏱ Pay Later at Counter"
+                          : "💵 Unpaid"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stepper or Cancelled Banner */}
+                  <div className="py-2 mb-2">
+                    {String(order.status).toLowerCase() === "cancelled" ? (
+                      <div className="w-full bg-rose-50 border border-rose-100 text-rose-800 rounded-xl p-3 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-lg">🛑</span>
+                          <div>
+                            <h4 className="font-extrabold text-xs uppercase tracking-wider text-rose-900">Order Cancelled</h4>
+                            <p className="text-rose-500 text-[10px] mt-0.5 font-semibold">This order was cancelled by the staff.</p>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 bg-rose-100 text-rose-800 border border-rose-200 text-[9px] font-black tracking-widest uppercase rounded-full">
+                          CANCELLED
+                        </span>
+                      </div>
+                    ) : (
+                      <OrderStepper status={order.status} />
+                    )}
                   </div>
 
                   <div>

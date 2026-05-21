@@ -40,10 +40,252 @@ const getStatusColor = (status) => {
   return "bg-gray-100 text-gray-800 border-gray-200";
 };
 
+const STEPS = [
+  { label: "Pending", icon: "⏳" },
+  { label: "Preparing", icon: "🍳" },
+  { label: "Ready", icon: "🔔" },
+  { label: "Completed", icon: "✓" }
+];
+
+const getActiveStep = (status) => {
+  const s = String(status).toLowerCase();
+  if (s === "pending") return 0;
+  if (s === "in progress" || s === "preparing") return 1;
+  if (s === "ready" || s === "ready for service") return 2;
+  if (s === "completed") return 3;
+  return -1;
+};
+
+const OrderStepper = ({ status }) => {
+  const activeStep = getActiveStep(status);
+
+  if (activeStep === -1) return null;
+
+  return (
+    <div className="w-full py-4 px-2 overflow-x-auto scrollbar-none">
+      <div className="relative flex justify-between items-center w-full min-w-[320px] md:min-w-0">
+        {/* Connection line background */}
+        <div className="absolute top-5 left-0 right-0 h-1 bg-slate-100 rounded-full z-0"></div>
+
+        {/* Dynamic completed line */}
+        <div
+          className="absolute top-5 left-0 h-1 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full transition-all duration-700 ease-out z-0"
+          style={{ width: `${(activeStep / (STEPS.length - 1)) * 100}%` }}
+        ></div>
+
+        {/* Interactive nodes */}
+        {STEPS.map((step, idx) => {
+          const isCompleted = idx < activeStep;
+          const isActive = idx === activeStep;
+          const isPending = idx > activeStep;
+
+          let circleStyle = "";
+          let textStyle = "";
+
+          if (isCompleted) {
+            circleStyle = "bg-emerald-500 text-white border-emerald-500 scale-105 shadow-md shadow-emerald-100";
+            textStyle = "text-emerald-600 font-extrabold";
+          } else if (isActive) {
+            circleStyle = "bg-white text-emerald-600 border-emerald-500 shadow-lg ring-4 ring-emerald-50 scale-115 animate-pulse";
+            textStyle = "text-slate-800 font-black scale-105";
+          } else {
+            circleStyle = "bg-white text-slate-400 border-slate-200 shadow-sm";
+            textStyle = "text-slate-400 font-medium";
+          }
+
+          return (
+            <div key={idx} className="flex flex-col items-center relative z-10 select-none flex-1">
+              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${circleStyle}`}>
+                <span className="text-xs">{step.icon}</span>
+              </div>
+              <span className={`text-[9px] md:text-xs mt-2 text-center tracking-wider transition-all duration-500 whitespace-nowrap ${textStyle}`}>
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const CollectPaymentModal = ({ order, onClose, onConfirm }) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleConfirm = async (method) => {
+    setSubmitting(true);
+    try {
+      await onConfirm(method);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const grandTotal = (order.total * 1.05).toFixed(2);
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl border border-slate-100 relative animate-scaleUp">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          disabled={submitting}
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition cursor-pointer"
+        >
+          ✕
+        </button>
+
+        {/* Header Icon */}
+        <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100">
+          <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center text-3xl shadow-inner mb-3">
+            💵
+          </div>
+          <h3 className="text-xl font-black text-slate-800 tracking-tight">Confirm Payment Collection</h3>
+          <p className="text-slate-500 text-xs mt-1 max-w-xs">
+            This order is currently unpaid. Please confirm that you have collected the full amount at the counter before completing delivery.
+          </p>
+        </div>
+
+        {/* Order Info & Total */}
+        <div className="my-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm space-y-2">
+          <div className="flex justify-between text-slate-500">
+            <span>Customer:</span>
+            <span className="font-extrabold text-slate-800">{order.userId?.name || order.customerName || "Guest"}</span>
+          </div>
+          <div className="flex justify-between text-slate-500">
+            <span>Order Type:</span>
+            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider">
+              {order.payment?.method === "PayLater" ? "⏱ Pay Later at Counter" : "💵 Cash Payment"}
+            </span>
+          </div>
+          <div className="flex justify-between text-base font-extrabold text-slate-800 pt-2 border-t border-dashed border-slate-200">
+            <span>Grand Total Due:</span>
+            <span className="text-emerald-600 text-lg">₹{grandTotal}</span>
+          </div>
+        </div>
+
+        {/* Action Choices */}
+        <div className="space-y-3">
+          <button
+            onClick={() => handleConfirm("Cash")}
+            disabled={submitting}
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 cursor-pointer"
+          >
+            <span>💵</span>
+            {submitting ? "Processing..." : "Cash Collected at Counter"}
+          </button>
+          
+          <button
+            onClick={() => handleConfirm("Online")}
+            disabled={submitting}
+            className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 cursor-pointer"
+          >
+            <span>📱</span>
+            {submitting ? "Processing..." : "UPI / Card Received at Counter"}
+          </button>
+
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl transition flex items-center justify-center active:scale-98 disabled:opacity-50 cursor-pointer"
+          >
+            Cancel & Keep Unpaid
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Token Verification Modal Component
+const TokenVerificationModal = ({ tokenNumber, onClose, onConfirm }) => {
+  const [inputToken, setInputToken] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const expected = String(tokenNumber || "").trim().toUpperCase();
+    const entered = String(inputToken).trim().toUpperCase();
+
+    if (entered === expected || entered === expected.replace("TK-", "")) {
+      onConfirm();
+    } else {
+      setError(`Verification failed! Expected "${expected}"`);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[120] flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl max-w-sm w-full p-6 md:p-8 shadow-2xl border border-slate-100 relative animate-scaleUp text-gray-800 text-center">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          type="button"
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition cursor-pointer font-bold"
+        >
+          ✕
+        </button>
+
+        {/* Header Icon */}
+        <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-3xl shadow-inner mb-3">
+            🔑
+          </div>
+          <h3 className="text-xl font-black text-slate-800 tracking-tight">Verify Order Token</h3>
+          <p className="text-slate-500 text-xs mt-1 max-w-xs">
+            Ask the customer for their secure Order Token and enter it below to authorize delivery completion.
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div>
+            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5">
+              Customer Token ID
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. TK-ABCD"
+              value={inputToken}
+              onChange={(e) => {
+                setInputToken(e.target.value);
+                setError("");
+              }}
+              className="w-full bg-slate-50 border border-slate-205 rounded-2xl py-3 px-4 text-center text-xl font-black tracking-widest text-slate-850 uppercase focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              autoFocus
+            />
+          </div>
+
+          {error && (
+            <p className="text-rose-600 text-xs font-extrabold animate-bounce">
+              ❌ {error}
+            </p>
+          )}
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+            >
+              Verify & Complete Order
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Order Details Modal Component
 const OrderDetailModal = ({ order, onClose, onStatusUpdated }) => {
   const [newStatus, setNewStatus] = useState(order.status);
   const [updating, setUpdating] = useState(false);
+  const [showPaymentCollect, setShowPaymentCollect] = useState(false);
+  const [pendingCompleteData, setPendingCompleteData] = useState(null);
+  const [showTokenVerify, setShowTokenVerify] = useState(false);
+  const [expectedToken, setExpectedToken] = useState("");
 
   const statusOptions = [
     "pending",
@@ -53,16 +295,43 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }) => {
     "cancelled"
   ];
 
-  const handleUpdate = async () => {
+  const handleUpdate = async (enforcedMethod = null, tokenVerified = false) => {
+    if (newStatus === "completed" && !order.payment?.paid && !enforcedMethod && !tokenVerified && !pendingCompleteData?.paymentSuccessData) {
+      setShowPaymentCollect(true);
+      return;
+    }
+
     setUpdating(true);
     try {
+      let paymentSuccessData = null;
+      if (enforcedMethod) {
+        const payRes = await axios.put(
+          `http://localhost:5001/api/order/${order._id}/payment-success`,
+          { method: enforcedMethod },
+          { withCredentials: true }
+        );
+        toast.success("Payment marked as successful!");
+        paymentSuccessData = payRes.data;
+      }
+
+      if (newStatus === "completed" && !tokenVerified) {
+        const activeToken = paymentSuccessData?.tokenNumber || order.tokenNumber || `TK-${order._id.substring(order._id.length - 4).toUpperCase()}`;
+        setExpectedToken(activeToken);
+        setPendingCompleteData({ paymentSuccessData });
+        setShowTokenVerify(true);
+        setUpdating(false);
+        return;
+      }
+
+      const targetPaymentData = pendingCompleteData?.paymentSuccessData || paymentSuccessData;
+
       await axios.put(
         `http://localhost:5001/api/order/${order._id}/status`,
         { status: newStatus },
         { withCredentials: true }
       );
       toast.success(`Order status updated to ${getStatusLabel(newStatus)}`);
-      if (onStatusUpdated) onStatusUpdated(order._id, newStatus);
+      if (onStatusUpdated) onStatusUpdated(order._id, newStatus, targetPaymentData);
       onClose();
     } catch (err) {
       console.error("Error updating status:", err);
@@ -106,6 +375,54 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }) => {
             </div>
           </div>
 
+          {/* Payment Status Card */}
+          <div className="bg-slate-50 border border-slate-200/50 p-4 rounded-2xl flex justify-between items-center">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider text-slate-400">Payment Status</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`px-2.5 py-1 text-xs font-black rounded-full uppercase tracking-wider ${
+                  order.payment?.paid
+                    ? "bg-green-100 text-green-800 border border-green-200"
+                    : order.payment?.method === "PayLater"
+                    ? "bg-amber-100 text-amber-800 border border-amber-200 animate-pulse"
+                    : "bg-rose-100 text-rose-800 border border-rose-200"
+                }`}>
+                  {order.payment?.paid
+                    ? "✓ Paid"
+                    : order.payment?.method === "PayLater"
+                    ? "⏱ Pay Later at Counter"
+                    : "💵 Unpaid (Cash/Counter)"}
+                </span>
+              </div>
+            </div>
+            {order.tokenNumber && (
+              <div className="text-right">
+                <p className="text-xs font-black uppercase tracking-wider text-slate-400">Token Number</p>
+                <p className="text-sm font-black text-green-700 bg-green-50 border border-green-200 px-2.5 py-0.5 rounded mt-1 inline-block">
+                  {order.tokenNumber}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Order Progress Stepper */}
+          <div className="bg-slate-50 border border-slate-200/50 p-4 rounded-2xl">
+            <p className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Order Status Pipeline</p>
+            {order.status === "cancelled" ? (
+              <div className="w-full bg-rose-50 border border-rose-100 text-rose-800 rounded-xl p-3 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg">🛑</span>
+                  <div>
+                    <h4 className="font-extrabold text-xs uppercase tracking-wider text-rose-900">Cancelled</h4>
+                    <p className="text-rose-500 text-[10px] mt-0.5 font-semibold font-mono">This order was cancelled by the staff.</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <OrderStepper status={order.status} />
+            )}
+          </div>
+
           {/* Items List */}
           <div>
             <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-3">Items Ordered</h4>
@@ -147,7 +464,7 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }) => {
                 ))}
               </select>
               <button
-                onClick={handleUpdate}
+                onClick={() => handleUpdate()}
                 disabled={updating || newStatus === order.status}
                 className={`px-6 py-3 font-bold text-white rounded-2xl transition duration-300 shadow-sm active:scale-95 ${
                   newStatus === order.status ? "bg-slate-300 cursor-not-allowed" : "bg-emerald-500 hover:bg-emerald-600"
@@ -158,6 +475,29 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }) => {
             </div>
           </div>
         </div>
+        {showPaymentCollect && (
+          <CollectPaymentModal
+            order={order}
+            onClose={() => setShowPaymentCollect(false)}
+            onConfirm={async (method) => {
+              await handleUpdate(method);
+              setShowPaymentCollect(false);
+            }}
+          />
+        )}
+        {showTokenVerify && (
+          <TokenVerificationModal
+            tokenNumber={expectedToken}
+            onClose={() => {
+              setShowTokenVerify(false);
+              setPendingCompleteData(null);
+            }}
+            onConfirm={async () => {
+              setShowTokenVerify(false);
+              await handleUpdate(null, true);
+            }}
+          />
+        )}
       </div>
     </div>
   );
@@ -833,6 +1173,8 @@ function OrderPage() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [pendingPaymentOrder, setPendingPaymentOrder] = useState(null);
+  const [pendingTokenOrder, setPendingTokenOrder] = useState(null);
 
   useEffect(() => {
     fetchProfileAndOrders();
@@ -904,6 +1246,85 @@ function OrderPage() {
       nextStatus = "cancelled";
     }
 
+    const targetOrder = orders.find((o) => o._id === orderId);
+    if (nextStatus === "completed" && targetOrder) {
+      if (!targetOrder.payment?.paid) {
+        setPendingPaymentOrder({
+          order: targetOrder,
+          onConfirm: async (method) => {
+            try {
+              const payRes = await axios.put(
+                `http://localhost:5001/api/order/${orderId}/payment-success`,
+                { method },
+                { withCredentials: true }
+              );
+              toast.success("Payment marked as successful!");
+              setPendingPaymentOrder(null);
+
+              // Immediately open Token Verification
+              const activeToken = payRes.data?.tokenNumber || targetOrder.tokenNumber || `TK-${orderId.substring(orderId.length - 4).toUpperCase()}`;
+              setPendingTokenOrder({
+                order: targetOrder,
+                expectedToken: activeToken,
+                onConfirm: async () => {
+                  try {
+                    await axios.put(
+                      `http://localhost:5001/api/order/${orderId}/status`,
+                      { status: "completed" },
+                      { withCredentials: true }
+                    );
+                    toast.success("Order marked as Completed");
+                    setOrders((prev) =>
+                      prev.map((o) =>
+                        o._id === orderId 
+                          ? { ...o, ...payRes.data, status: "completed" } 
+                          : o
+                      )
+                    );
+                    setPendingTokenOrder(null);
+                  } catch (err) {
+                    console.error("Error updating status:", err);
+                    toast.error("Failed to complete order.");
+                  }
+                }
+              });
+            } catch (err) {
+              console.error("Error updating payment status:", err);
+              toast.error("Failed to mark payment success. Cannot complete order.");
+            }
+          }
+        });
+        return;
+      } else {
+        // Order is already paid, go straight to Token Verification
+        const activeToken = targetOrder.tokenNumber || `TK-${orderId.substring(orderId.length - 4).toUpperCase()}`;
+        setPendingTokenOrder({
+          order: targetOrder,
+          expectedToken: activeToken,
+          onConfirm: async () => {
+            try {
+              await axios.put(
+                `http://localhost:5001/api/order/${orderId}/status`,
+                { status: "completed" },
+                { withCredentials: true }
+              );
+              toast.success("Order marked as Completed");
+              setOrders((prev) =>
+                prev.map((o) =>
+                  o._id === orderId ? { ...o, status: "completed" } : o
+                )
+              );
+              setPendingTokenOrder(null);
+            } catch (err) {
+              console.error("Error updating status:", err);
+              toast.error("Failed to complete order.");
+            }
+          }
+        });
+        return;
+      }
+    }
+
     try {
       await axios.put(
         `http://localhost:5001/api/order/${orderId}/status`,
@@ -924,11 +1345,18 @@ function OrderPage() {
     }
   };
 
-  const handleModalStatusUpdated = (orderId, newStatus) => {
+  const handleModalStatusUpdated = (orderId, newStatus, paymentData = null) => {
     setOrders((prev) =>
-      prev.map((order) =>
-        order._id === orderId ? { ...order, status: newStatus } : order
-      )
+      prev.map((order) => {
+        if (order._id === orderId) {
+          const updated = { ...order, status: newStatus };
+          if (paymentData) {
+            return { ...updated, ...paymentData };
+          }
+          return updated;
+        }
+        return order;
+      })
     );
   };
 
@@ -1132,29 +1560,40 @@ function OrderPage() {
                         key={order._id}
                         className="bg-white/60 hover:bg-white border border-white/20 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 relative"
                       >
-                        {/* Time & Price Badge */}
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-                              {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {/* Elegant Header Layout to prevent collapsing */}
+                        <div className="border-b border-slate-100 pb-3 mb-3">
+                          <div className="flex justify-between items-start gap-2 mb-2">
+                            <h3 className="text-base font-black text-slate-800 leading-tight truncate max-w-[70%]" title={order.userId?.name || order.customerName || "Guest"}>
+                              {order.userId?.name || order.customerName || "Guest"}
+                            </h3>
+                            <span className={`px-2.5 py-1 text-[10px] font-black tracking-wider uppercase rounded-full shadow-sm border shrink-0 ${getStatusColor(order.status)}`}>
+                              {getStatusLabel(order.status)}
                             </span>
-                            <h3 className="text-lg font-black text-slate-800 mt-1">{order.userId?.name || order.customerName || "Guest"}</h3>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                            <span className="font-black uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                              🕒 {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                             {order.table && (
-                              <p className="text-xs font-semibold text-slate-500">Table: {order.table}</p>
+                              <span className="font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                🪑 Table: {order.table}
+                              </span>
                             )}
                             {order.tokenNumber ? (
-                              <span className="text-[10px] font-black text-green-700 bg-green-50 border border-green-155 inline-block px-2 py-0.5 rounded mt-1.5">
-                                Token: {order.tokenNumber}
+                              <span className="font-black text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
+                                🎟️ Token: {order.tokenNumber}
                               </span>
                             ) : (
-                              <span className="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-155 inline-block px-2 py-0.5 rounded mt-1.5 animate-pulse">
-                                Unpaid • Cash
+                              <span className={`font-black px-2 py-0.5 rounded border animate-pulse ${
+                                order.payment?.method === "PayLater"
+                                  ? "text-amber-700 bg-amber-50 border-amber-200"
+                                  : "text-rose-700 bg-rose-50 border-rose-200"
+                              }`}>
+                                {order.payment?.method === "PayLater" ? "⏱️ Unpaid • Pay Later" : "💵 Unpaid • Cash"}
                               </span>
                             )}
                           </div>
-                          <span className={`px-2.5 py-1 text-[10px] font-black tracking-wider uppercase rounded-full shadow-sm border ${getStatusColor(order.status)}`}>
-                            {getStatusLabel(order.status)}
-                          </span>
                         </div>
 
                         {/* Items Checklist */}
@@ -1175,14 +1614,14 @@ function OrderPage() {
 
                         {/* Actions */}
                         <div className="flex flex-col gap-2">
-                          {!order.payment?.paid && order.payment?.method === "Cash" && (
+                          {!order.payment?.paid && (order.payment?.method === "Cash" || order.payment?.method === "PayLater") && (
                             <button
                               type="button"
                               onClick={() => handleMarkPaymentSuccess(order._id)}
                               className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition shadow-sm flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                             >
                               <FaCheckCircle className="text-xs" />
-                              Mark Paid (Cash Received)
+                              {order.payment?.method === "PayLater" ? "Mark Paid (Pay Later Collected)" : "Mark Paid (Cash Received)"}
                             </button>
                           )}
                           <div className="flex gap-2">
@@ -1250,6 +1689,22 @@ function OrderPage() {
           user={user}
           onClose={() => setShowOfflineModal(false)}
           onOrderCreated={handleOfflineOrderCreated}
+        />
+      )}
+
+      {pendingPaymentOrder && (
+        <CollectPaymentModal
+          order={pendingPaymentOrder.order}
+          onClose={() => setPendingPaymentOrder(null)}
+          onConfirm={pendingPaymentOrder.onConfirm}
+        />
+      )}
+
+      {pendingTokenOrder && (
+        <TokenVerificationModal
+          tokenNumber={pendingTokenOrder.expectedToken}
+          onClose={() => setPendingTokenOrder(null)}
+          onConfirm={pendingTokenOrder.onConfirm}
         />
       )}
     </div>
