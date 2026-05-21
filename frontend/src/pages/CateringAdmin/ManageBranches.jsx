@@ -41,19 +41,35 @@ import UpdateBranchModal from './UpdateBranchModels';
 const BranchCard = ({ branch, onDelete, onUpdate }) => {
   const isActive = branch.status === 'Active';
   return (
-    <div className={`bg-white p-4 rounded-lg shadow-md transition-opacity ${!isActive && 'opacity-60'}`}>
-      <div className="flex justify-between items-start">
-        <h3 className="text-xl font-semibold pr-2 text-gray-500">{branch.name}</h3>
-        <span className={`px-3 py-1 text-xs font-bold leading-none rounded-full
-            ${isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-          {branch.status}
-        </span>
+    <div className={`bg-white/45 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 ${!isActive && 'opacity-60'}`}>
+      <div>
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">{branch.name}</h3>
+          <span className={`px-2.5 py-1 text-xs font-black tracking-wider uppercase rounded-full shadow-sm
+              ${isActive ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-250'}`}>
+            {branch.status}
+          </span>
+        </div>
+        <p className="text-slate-700 text-sm font-medium flex items-center gap-1.5">
+          <span>📍</span> {branch.location || "No address provided"}
+        </p>
+        <p className="text-slate-500 text-xs mt-1.5 font-semibold flex items-center gap-1.5">
+          <span>📞</span> {branch.phone || "No phone provided"}
+        </p>
       </div>
-      <p className="text-gray-600 mt-2">📍 {branch.location || "No address provided"}</p>
-      <p className="text-gray-500 text-sm mt-1">📞 {branch.phone || "No phone provided"}</p>
-      <div className="mt-4"> 
-        <button onClick={() => onDelete(branch._id)} className="bg-red-500 text-white px-3 mr-3 py-1 rounded-lg hover:bg-red-600"> Delete
-        </button>  <button onClick={() => onUpdate(branch)} className="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600"> Update </button>
+      <div className="mt-6 flex gap-3"> 
+        <button 
+          onClick={() => onDelete(branch._id)} 
+          className="flex-1 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm rounded-xl transition shadow-sm active:scale-95"
+        > 
+          Delete
+        </button>  
+        <button 
+          onClick={() => onUpdate(branch)} 
+          className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm rounded-xl transition shadow-sm active:scale-95"
+        > 
+          Update 
+        </button>
       </div>
     </div>
   );
@@ -134,11 +150,17 @@ function ManageBranches() {
         <Navbar/>
       </div>
       <div className="pt-20 p-8">
-        <h2 className="text-2xl font-bold mb-4 text-white">📍 Our Branches</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {branches.map((branch) => (
-            <BranchCard key={branch._id} branch={branch} onDelete={handleDelete} onUpdate={handleOpenUpdateModal}  />
-          ))}
+        <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-3xl shadow-xl p-8 transition-all duration-500">
+          <h2 className="text-3xl font-black text-slate-900 mb-6 tracking-tight flex items-center gap-2">
+            <span>📍</span> Our Branches
+          </h2>
+          <div className="w-20 h-1.5 bg-gradient-to-r from-emerald-500 to-green-400 mb-8 rounded-full shadow-sm"></div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {branches.map((branch) => (
+              <BranchCard key={branch._id} branch={branch} onDelete={handleDelete} onUpdate={handleOpenUpdateModal}  />
+            ))}
+          </div>
         </div>
       </div>
       {isModalOpen && (

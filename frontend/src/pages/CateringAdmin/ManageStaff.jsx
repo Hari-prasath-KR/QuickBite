@@ -40,26 +40,34 @@ function Navbar() {
 const StaffCard = ({ staff, onDelete, onUpdate }) => {
   const initials = staff.name?.substring(0, 2).toUpperCase() || '??';
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md">
-      <div className="flex items-center space-x-4">
-        <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xl">
-          {initials}
+    <div className="bg-white/45 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between hover:-translate-y-1">
+      <div>
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-green-400 flex items-center justify-center text-white font-extrabold text-lg shadow-sm">
+            {initials}
+          </div>
+          <div className="text-left">
+            <h3 className="text-lg font-extrabold text-slate-800 leading-tight">{staff.name}</h3>
+            <p className="text-xs font-semibold text-slate-500 mt-0.5">{staff.email}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-xl font-semibold text-gray-500">{staff.name}</h3>
-          <p className="text-gray-500">{staff.email}</p>
+        <div className="pt-3 border-t border-slate-200/40">
+          <p className="text-sm font-medium text-slate-700">
+            <span className="font-extrabold text-slate-800">Branch:</span> {staff.branchId?.name || 'Unassigned'}
+          </p>
         </div>
       </div>
-      <div className="mt-4 pt-4 border-t">
-        <p className="text-sm text-gray-600">
-          <strong>Branch:</strong> {staff.branchId?.name || 'Unassigned'}
-        </p>
-      </div>
-      <div className="mt-4">
-        <button onClick={() => onDelete(staff._id)} className="bg-red-500 text-white px-3 mr-3 py-1 rounded-lg hover:bg-red-600">
+      <div className="mt-6 flex gap-3">
+        <button 
+          onClick={() => onDelete(staff._id)} 
+          className="flex-1 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm rounded-xl transition shadow-sm active:scale-95"
+        >
           Delete
         </button>
-        <button onClick={() => onUpdate(staff)} className="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600">
+        <button 
+          onClick={() => onUpdate(staff)} 
+          className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm rounded-xl transition shadow-sm active:scale-95"
+        >
           Update
         </button>
       </div>
@@ -131,17 +139,23 @@ function ManageStaff() {
         <Navbar/>
       </div>
       <div className="pt-20 p-8">
-      <h2 className="text-2xl font-bold mb-6 text-white">👥 Staff Members</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {staffList.map((staff) => (
-          <StaffCard 
-            key={staff._id} 
-            staff={staff} 
-            onDelete={handleDeleteStaff} 
-            onUpdate={handleOpenUpdateModal}
-          />
-        ))}
-      </div>
+        <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-3xl shadow-xl p-8 transition-all duration-500">
+          <h2 className="text-3xl font-black text-slate-900 mb-6 tracking-tight flex items-center gap-2">
+            <span>👥</span> Staff Members
+          </h2>
+          <div className="w-20 h-1.5 bg-gradient-to-r from-emerald-500 to-green-400 mb-8 rounded-full shadow-sm"></div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {staffList.map((staff) => (
+              <StaffCard 
+                key={staff._id} 
+                staff={staff} 
+                onDelete={handleDeleteStaff} 
+                onUpdate={handleOpenUpdateModal}
+              />
+            ))}
+          </div>
+        </div>
       </div>
       {isModalOpen && (
         <UpdateStaffModal
