@@ -27,6 +27,23 @@ function MorePage() {
   const [waitTime, setWaitTime] = useState(15);
   const [operationalMode, setOperationalMode] = useState("Normal");
 
+  // Daily Target orders - resets to 0 everyday until staff sets it
+  const [dailyTarget, setDailyTarget] = useState(() => {
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const savedDate = localStorage.getItem("quickbite_checklist_target_date");
+      const savedTarget = localStorage.getItem("quickbite_checklist_target");
+      if (savedDate === todayStr && savedTarget) {
+        return parseInt(savedTarget);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return 0; // 0 means not configured yet for today
+  });
+
+  const [todayOrdersCount, setTodayOrdersCount] = useState(0);
+
   // Notice Board States
   const [notices, setNotices] = useState([
     {
@@ -54,40 +71,163 @@ function MorePage() {
   const [newNoticeText, setNewNoticeText] = useState("");
   const [newNoticeTag, setNewNoticeTag] = useState("Alert");
 
-  // Cleaning Checklist States
-  const [checklist, setChecklist] = useState([
-    { id: 1, task: "Sanitize counters and cooking surfaces", completed: true },
+  // Cleaning Checklist States - reset to unmarked everyday
+  const defaultTasks = [
+    { id: 1, task: "Sanitize counters and cooking surfaces", completed: false },
     { id: 2, task: "Log refrigerator thermometer temperature", completed: false },
     { id: 3, task: "Check and restock sanitizer stations", completed: false },
-    { id: 4, task: "Waste disposal and bin liner replacement", completed: true },
+    { id: 4, task: "Waste disposal and bin liner replacement", completed: false },
     { id: 5, task: "Verify POS scanners are wiped and active", completed: false }
-  ]);
+  ];
+
+  const [checklist, setChecklist] = useState(() => {
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const savedDate = localStorage.getItem("quickbite_checklist_date");
+      const savedChecks = localStorage.getItem("quickbite_checklist_items");
+      if (savedDate === todayStr && savedChecks) {
+        return JSON.parse(savedChecks);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return defaultTasks;
+  });
 
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (!user || !user.branchId) return;
+
+    const fetchOrders = async () => {
+      try {
+        const ordersRes = await axios.get(
+          `http://localhost:5001/api/order/branch/${user.branchId}/today`,
+          { withCredentials: true }
+        );
+        setTodayOrdersCount(ordersRes.data.length || 0);
+      } catch (ordersErr) {
+        console.error("Failed to fetch today's orders in background:", ordersErr);
+      }
+    };
+
+    // Poll every 20 seconds
+    const interval = setInterval(fetchOrders, 20000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const fetchProfile = async () => {
     try {
       const userRes = await axios.get("http://localhost:5001/api/auth/profile", { withCredentials: true });
       const u = userRes.data.data || userRes.data;
       setUser(u);
+
+      const bId = u.branchId;
+      if (bId) {
+        // Fetch current branch status from DB to sync UI
+        const branchRes = await axios.get(`http://localhost:5001/api/branch/detail/${bId}`);
+        const branchData = branchRes.data;
+        setIsBranchOpen(branchData.status === "Active");
+
+        // Fetch today's orders count
+        try {
+          const ordersRes = await axios.get(
+            `http://localhost:5001/api/order/branch/${bId}/today`,
+            { withCredentials: true }
+          );
+          setTodayOrdersCount(ordersRes.data.length || 0);
+        } catch (ordersErr) {
+          console.error("Failed to fetch today's orders count:", ordersErr);
+        }
+      }
     } catch (err) {
-      console.error("Error fetching staff profile:", err);
+      console.error("Error fetching staff profile or branch status:", err);
     } finally {
       setLoading(false);
     }
   };
 
   // Operational toggles & handlers
-  const handleToggleBranch = () => {
+  const handleToggleBranch = async () => {
+    if (!user || !user.branchId) {
+      toast.error("Staff user not linked to any branch.");
+      return;
+    }
+
+    if (operationalMode === "Maintenance") {
+      toast.error("Cannot accept orders during Maintenance Break.");
+      return;
+    }
+
     const newState = !isBranchOpen;
     setIsBranchOpen(newState);
-    if (newState) {
-      toast.success("Branch status set to ONLINE & AVAILABLE");
-    } else {
-      toast.error("Branch status set to OFFLINE & CLOSED");
+    const newStatus = newState ? "Active" : "Inactive";
+
+    try {
+      await axios.put(
+        `http://localhost:5001/api/branch/detail/${user.branchId}/status`,
+        { status: newStatus },
+        { withCredentials: true }
+      );
+      if (newState) {
+        toast.success("Branch status set to ONLINE & AVAILABLE");
+      } else {
+        toast.error("Branch status set to OFFLINE & CLOSED");
+      }
+    } catch (err) {
+      console.error("Error updating branch status:", err);
+      toast.error("Failed to update branch status in database.");
+      setIsBranchOpen(!newState); // rollback
     }
+  };
+
+  const handleOperationalModeChange = async (mode) => {
+    setOperationalMode(mode);
+    toast.success(`Operational load updated to ${mode}`);
+
+    if (mode === "Maintenance") {
+      setIsBranchOpen(false);
+      if (user && user.branchId) {
+        try {
+          await axios.put(
+            `http://localhost:5001/api/branch/detail/${user.branchId}/status`,
+            { status: "Inactive" },
+            { withCredentials: true }
+          );
+          toast.error("Maintenance break active: Online orders disabled for customers.");
+        } catch (err) {
+          console.error("Failed to set branch inactive during maintenance break:", err);
+        }
+      }
+    } else {
+      setIsBranchOpen(true);
+      if (user && user.branchId) {
+        try {
+          await axios.put(
+            `http://localhost:5001/api/branch/detail/${user.branchId}/status`,
+            { status: "Active" },
+            { withCredentials: true }
+          );
+          toast.success(`Kitchen load set to ${mode}. Branch is now ONLINE & accepting orders.`);
+        } catch (err) {
+          console.error("Failed to set branch active:", err);
+        }
+      }
+    }
+  };
+
+  const handleUpdateTarget = (val) => {
+    setDailyTarget(val);
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      localStorage.setItem("quickbite_checklist_target_date", todayStr);
+      localStorage.setItem("quickbite_checklist_target", val.toString());
+    } catch (e) {
+      console.error(e);
+    }
+    toast.success(`Today's order target set to ${val} orders`);
   };
 
   const handleAddNotice = (e) => {
@@ -122,11 +262,17 @@ function MorePage() {
   };
 
   const handleToggleChecklist = (id) => {
-    setChecklist(
-      checklist.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item
-      )
+    const updated = checklist.map((item) =>
+      item.id === id ? { ...item, completed: !item.completed } : item
     );
+    setChecklist(updated);
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      localStorage.setItem("quickbite_checklist_date", todayStr);
+      localStorage.setItem("quickbite_checklist_items", JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // Stats derivations
@@ -171,15 +317,62 @@ function MorePage() {
             
             {/* Shift Tracker Card */}
             <div className="bg-white/45 backdrop-blur-xl border border-white/40 p-5 rounded-3xl flex items-center gap-4 transition-all hover:scale-[1.02] shadow-xl">
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-2xl shadow-inner">
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-2xl shadow-inner flex-shrink-0">
                 <FaTrophy size={24} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Today's Target</p>
-                <h3 className="text-xl font-black text-slate-800 mt-0.5">85% Complete</h3>
-                {/* Visual Progress Bar */}
+                <div className="flex justify-between items-center gap-2">
+                  <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Today's Target</p>
+                  <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-slate-200/50">
+                    <button
+                      onClick={() => handleUpdateTarget(Math.max(1, dailyTarget - 5))}
+                      className="text-slate-600 hover:text-slate-800 font-extrabold text-xs focus:outline-none px-1"
+                      title="Decrease Target"
+                    >
+                      -
+                    </button>
+                    <span className="text-xs font-black text-slate-700 min-w-[28px] text-center">{dailyTarget}</span>
+                    <button
+                      onClick={() => handleUpdateTarget(Math.min(500, dailyTarget + 5))}
+                      className="text-slate-600 hover:text-slate-800 font-extrabold text-xs focus:outline-none px-1"
+                      title="Increase Target"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                {dailyTarget === 0 ? (
+                  <>
+                    <h3 className="text-sm font-extrabold text-slate-600 mt-1">Pending target setup</h3>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mt-1">
+                      Set target to active tracker
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-xl font-black text-slate-800 mt-0.5">
+                      {todayOrdersCount} / {dailyTarget} Orders
+                    </h3>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mt-1 flex justify-between items-center">
+                      <span>{dailyTarget > 0 ? Math.round((todayOrdersCount / dailyTarget) * 100) : 0}% Fulfilled</span>
+                      <span>
+                        {todayOrdersCount >= dailyTarget 
+                          ? "🎉 Daily Target Achieved!" 
+                          : `${Math.max(0, dailyTarget - todayOrdersCount)} more to target`}
+                      </span>
+                    </p>
+                  </>
+                )}
+                {/* Visual Progress Bar based on target progress */}
                 <div className="w-full bg-slate-200/50 rounded-full h-1.5 mt-2 overflow-hidden border border-white/20">
-                  <div className="bg-gradient-to-r from-emerald-400 to-green-500 h-full rounded-full" style={{ width: "85%" }}></div>
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      dailyTarget > 0 && todayOrdersCount >= dailyTarget
+                        ? "bg-gradient-to-r from-emerald-400 to-green-500 shadow-sm"
+                        : "bg-gradient-to-r from-amber-400 to-yellow-500"
+                    }`}
+                    style={{ width: `${dailyTarget > 0 ? Math.min(100, Math.round((todayOrdersCount / dailyTarget) * 100)) : 0}%` }}
+                  ></div>
                 </div>
               </div>
             </div>
@@ -270,10 +463,7 @@ function MorePage() {
                   <label className="block font-extrabold text-sm text-slate-800">Current Kitchen Load</label>
                   <select
                     value={operationalMode}
-                    onChange={(e) => {
-                      setOperationalMode(e.target.value);
-                      toast.success(`Operational load updated to ${e.target.value}`);
-                    }}
+                    onChange={(e) => handleOperationalModeChange(e.target.value)}
                     className="w-full bg-white/70 border border-slate-200/50 text-slate-700 py-2.5 px-3.5 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent font-bold transition-all shadow-inner"
                   >
                     <option value="Normal">Normal Operation</option>
@@ -301,32 +491,90 @@ function MorePage() {
                   </div>
                 </div>
 
-                {/* Checklist Directory */}
-                <div className="space-y-2.5">
-                  {checklist.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => handleToggleChecklist(item.id)}
-                      className={`p-3 border rounded-2xl flex items-center gap-3 transition-all cursor-pointer select-none active:scale-[0.99] shadow-sm ${
-                        item.completed
-                          ? "bg-green-500/5 border-green-500/20 text-slate-800"
-                          : "bg-white/40 border-white/40 text-slate-600 hover:bg-white/60"
-                      }`}
-                    >
-                      <button className="focus:outline-none flex-shrink-0">
-                        {item.completed ? (
-                          <FaCheckCircle size={18} className="text-green-600" />
-                        ) : (
-                          <div className="h-[18px] w-[18px] border-2 border-slate-300 rounded-full bg-white transition-all hover:border-slate-500" />
-                        )}
-                      </button>
-                      <span className={`text-xs font-bold ${item.completed ? "line-through text-slate-400" : ""}`}>
-                        {item.task}
-                      </span>
+                {/* Checklist Directory / Setup Panel */}
+                {dailyTarget === 0 ? (
+                  <div className="bg-white/50 backdrop-blur-md rounded-2xl p-5 border border-amber-300/30 text-center space-y-4">
+                    <div className="mx-auto h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 animate-bounce">
+                      <FaTrophy size={20} />
                     </div>
-                  ))}
-                </div>
-
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-850">Today's Order Target Unset</h4>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Please configure today's order fulfillment target to start logging and tracking shift performance.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[15, 30, 50, 100].map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => handleUpdateTarget(t)}
+                          className="py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
+                        >
+                          {t} Orders
+                        </button>
+                      ))}
+                    </div>
+                    {/* Custom input field */}
+                    <div className="flex gap-2 justify-center items-center pt-2 border-t border-slate-200/50">
+                      <span className="text-xs font-bold text-slate-500">Custom Target:</span>
+                      <input
+                        type="number"
+                        id="custom-target-input"
+                        placeholder="e.g. 20"
+                        className="w-16 px-2 py-1 bg-white border border-slate-350 rounded-lg text-xs font-bold text-slate-700 text-center shadow-sm"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const val = parseInt(e.target.value);
+                            if (val > 0) {
+                              handleUpdateTarget(val);
+                            } else {
+                              toast.error("Please enter a valid target number.");
+                            }
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          const input = document.getElementById("custom-target-input");
+                          const val = parseInt(input?.value);
+                          if (val > 0) {
+                            handleUpdateTarget(val);
+                          } else {
+                            toast.error("Please enter a valid target number.");
+                          }
+                        }}
+                        className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white font-extrabold text-xs rounded-lg transition active:scale-95 cursor-pointer shadow-sm"
+                      >
+                        Set
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {checklist.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => handleToggleChecklist(item.id)}
+                        className={`p-3 border rounded-2xl flex items-center gap-3 transition-all cursor-pointer select-none active:scale-[0.99] shadow-sm ${
+                          item.completed
+                            ? "bg-green-500/5 border-green-500/20 text-slate-800"
+                            : "bg-white/40 border-white/40 text-slate-600 hover:bg-white/60"
+                        }`}
+                      >
+                        <button className="focus:outline-none flex-shrink-0">
+                          {item.completed ? (
+                            <FaCheckCircle size={18} className="text-green-600" />
+                          ) : (
+                            <div className="h-[18px] w-[18px] border-2 border-slate-300 rounded-full bg-white transition-all hover:border-slate-500" />
+                          )}
+                        </button>
+                        <span className={`text-xs font-bold ${item.completed ? "line-through text-slate-400" : ""}`}>
+                          {item.task}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
             </div>

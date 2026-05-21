@@ -1,4 +1,5 @@
 import Order from "../models/order.js";
+import Branch from "../models/branch.js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import dotenv from "dotenv";
@@ -20,6 +21,13 @@ export const addOrder = async (req, res) => {
     const { userId, cateringId, branchId, items, total, status, payment, table, customerName } = req.body;
     if (!cateringId || !items || items.length === 0 || !total) {
       return res.status(400).json({ message: "cateringId, items[], and total are required" });
+    }
+
+    if (branchId) {
+      const branch = await Branch.findById(branchId);
+      if (branch && branch.status === "Inactive") {
+        return res.status(400).json({ message: "This branch is currently offline or under maintenance break and is not accepting online orders." });
+      }
     }
     
     // We create the order first to get its _id, so we can generate a valid, unique token number
@@ -119,6 +127,13 @@ export const verifyRazorpayPayment = async (req, res) => {
 
     if (!userId || !cateringId || !items || items.length === 0 || !total) {
       return res.status(400).json({ message: "Required fields missing" });
+    }
+
+    if (branchId) {
+      const branch = await Branch.findById(branchId);
+      if (branch && branch.status === "Inactive") {
+        return res.status(400).json({ message: "This branch is currently offline or under maintenance break and is not accepting online orders." });
+      }
     }
 
     const isMock = razorpay_order_id && (razorpay_order_id.startsWith("order_mock_") || razorpay_signature === "mock_signature_approved");

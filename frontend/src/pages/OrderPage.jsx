@@ -43,6 +43,7 @@ const OrderPage = () => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [isCartVisible, setIsCartVisible] = useState(false); // Mobile drawer visibility
   const [category, setCategory] = useState("All");
+  const [branchDetail, setBranchDetail] = useState(null);
   
   // User profile cached for checkout details
   const [userProfile, setUserProfile] = useState(null);
@@ -67,6 +68,15 @@ const OrderPage = () => {
       }
     };
 
+    const fetchBranchDetail = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5001/api/branch/detail/${branchId}`);
+        setBranchDetail(res.data);
+      } catch (err) {
+        console.error("Error fetching branch details:", err);
+      }
+    };
+
     const fetchUserProfile = async () => {
       try {
         const res = await axios.get("http://localhost:5001/api/auth/profile", { withCredentials: true });
@@ -77,6 +87,7 @@ const OrderPage = () => {
     };
 
     fetchMenu();
+    fetchBranchDetail();
     fetchUserProfile();
   }, [branchId]);
 
@@ -128,6 +139,11 @@ const OrderPage = () => {
 
   // Checkout and Order Placement
   const handlePlaceOrder = async () => {
+    if (branchDetail?.status === "Inactive") {
+      alert("This branch is currently under maintenance or offline and is not accepting online orders.");
+      return;
+    }
+
     const items = Object.entries(cart).map(([itemId, quantity]) => {
       const menuItem = menuItems.find((m) => m.menuItemId?._id === itemId);
       return {
@@ -354,6 +370,20 @@ const OrderPage = () => {
       </div>
 
       <div className="pt-28 px-4 md:px-8 pb-12 container mx-auto max-w-7xl">
+        {branchDetail?.status === "Inactive" && (
+          <div className="bg-rose-500/10 backdrop-blur-md border border-rose-500/30 text-rose-800 p-5 rounded-2xl shadow-xl flex items-center justify-between mb-8 animate-pulse">
+            <div className="flex items-center space-x-3.5">
+              <span className="text-2xl">🚨</span>
+              <div>
+                <h4 className="font-extrabold text-sm text-rose-900">Branch Under Maintenance Break</h4>
+                <p className="text-xs text-rose-700 mt-0.5 font-semibold">
+                  This branch is currently offline or under maintenance and is NOT accepting online orders. Ordering is temporarily disabled.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Menu Header with Category Selector */}
         <div className="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/50 flex flex-col sm:flex-row justify-between items-center gap-4 mb-10">
           <div>
@@ -470,6 +500,7 @@ const OrderPage = () => {
                     totalPrice={totalPrice} 
                     handlePlaceOrder={handlePlaceOrder}
                     checkoutLoading={checkoutLoading}
+                    branchDetail={branchDetail}
                   />
                 </div>
               </div>
@@ -488,6 +519,7 @@ const OrderPage = () => {
         totalPrice={totalPrice}
         handlePlaceOrder={handlePlaceOrder}
         checkoutLoading={checkoutLoading}
+        branchDetail={branchDetail}
       />
 
       {/* 💳 HIGH-FIDELITY QUICKBITE PAYMENT SANDBOX FALLBACK MODAL */}
@@ -699,7 +731,7 @@ const OrderPage = () => {
 };
 
 // Helper component for Cart content
-const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLoading }) => (
+const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLoading, branchDetail }) => (
   <>
     {Object.keys(cart).length === 0 ? (
       <div className="text-center py-10 flex flex-col items-center">
@@ -750,10 +782,14 @@ const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLo
 
         <button
           onClick={handlePlaceOrder}
-          disabled={checkoutLoading}
+          disabled={checkoutLoading || branchDetail?.status === "Inactive"}
           className="w-full mt-5 bg-green-500 text-white font-extrabold py-3.5 rounded-xl hover:bg-green-600 active:scale-98 hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center text-base cursor-pointer"
         >
-          {checkoutLoading ? (
+          {branchDetail?.status === "Inactive" ? (
+            <>
+              🔒 Offline / Under Maintenance
+            </>
+          ) : checkoutLoading ? (
             <>
               <span className="animate-spin inline-block h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></span>
               Processing Payment...
