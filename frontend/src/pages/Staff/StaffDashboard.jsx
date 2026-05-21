@@ -128,91 +128,251 @@ const OrderStepper = ({ status }) => {
 
 const CollectPaymentModal = ({ order, onClose, onConfirm }) => {
   const [submitting, setSubmitting] = useState(false);
+  const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
+  const [mockPaymentData, setMockPaymentData] = useState(null);
 
   const handleConfirm = async (method) => {
-    setSubmitting(true);
-    try {
-      await onConfirm(method);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmitting(false);
+    if (method === "Cash") {
+      setSubmitting(true);
+      try {
+        await onConfirm("Cash");
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setSubmitting(false);
+      }
+    } else if (method === "Online") {
+      setSubmitting(true);
+      const grandTotalPaise = Math.round(order.total * 1.05 * 100);
+      
+      let razorpayOrder;
+      try {
+        const orderCreateRes = await axios.post("http://localhost:5001/api/order/razorpay-order", {
+          amount: grandTotalPaise,
+        });
+        razorpayOrder = orderCreateRes.data;
+      } catch (err) {
+        console.warn("⚠️ Backend failed to initialize online payment order, falling back to client-side mock:", err);
+        razorpayOrder = {
+          id: `order_mock_${Date.now()}`,
+          amount: grandTotalPaise,
+          currency: "INR",
+          receipt: `receipt_${Date.now()}`,
+          key_id: "rzp_test_placeholder_key",
+          isMock: true
+        };
+      }
+
+      const options = {
+        key: razorpayOrder.key_id,
+        amount: razorpayOrder.amount,
+        currency: "INR",
+        name: "QuickBite Staff Counter",
+        description: `Counter Payment for Order #${order._id.substring(order._id.length - 6).toUpperCase()}`,
+        order_id: razorpayOrder.id,
+        handler: async (response) => {
+          try {
+            await onConfirm("Online", response.razorpay_order_id, response.razorpay_payment_id);
+          } catch (err) {
+            console.error("Failed to process counter payment success:", err);
+            alert("Failed to confirm payment collection. Please try again.");
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        prefill: {
+          name: order.userId?.name || order.customerName || "Customer",
+          email: order.userId?.email || "customer@campus.edu",
+        },
+        theme: {
+          color: "#0284c7", // Sky blue for staff
+        },
+      };
+
+      if (razorpayOrder.isMock || !window.Razorpay) {
+        setMockPaymentData({ options, order: razorpayOrder });
+        setShowMockPaymentModal(true);
+        setSubmitting(false);
+        return;
+      }
+
+      try {
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+        setSubmitting(false);
+      } catch (sdkError) {
+        console.error("⚠️ Razorpay SDK open exception, falling back to mock payment modal:", sdkError);
+        setMockPaymentData({ options, order: razorpayOrder });
+        setShowMockPaymentModal(true);
+        setSubmitting(false);
+      }
     }
   };
 
   const grandTotal = (order.total * 1.05).toFixed(2);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl border border-slate-100 relative animate-scaleUp">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          disabled={submitting}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition cursor-pointer"
-        >
-          ✕
-        </button>
-
-        {/* Header Icon */}
-        <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100">
-          <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center text-3xl shadow-inner mb-3">
-            💵
-          </div>
-          <h3 className="text-xl font-black text-slate-800 tracking-tight">Confirm Payment Collection</h3>
-          <p className="text-slate-500 text-xs mt-1 max-w-xs">
-            This order is currently unpaid. Please confirm that you have collected the full amount at the counter before completing delivery.
-          </p>
-        </div>
-
-        {/* Order Info & Total */}
-        <div className="my-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm space-y-2">
-          <div className="flex justify-between text-slate-500">
-            <span>Customer:</span>
-            <span className="font-extrabold text-slate-800">{order.userId?.name || order.customerName || "Guest"}</span>
-          </div>
-          <div className="flex justify-between text-slate-500">
-            <span>Order Type:</span>
-            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider">
-              {order.payment?.method === "PayLater" ? "⏱ Pay Later at Counter" : "💵 Cash Payment"}
-            </span>
-          </div>
-          <div className="flex justify-between text-base font-extrabold text-slate-800 pt-2 border-t border-dashed border-slate-200">
-            <span>Grand Total Due:</span>
-            <span className="text-emerald-600 text-lg">₹{grandTotal}</span>
-          </div>
-        </div>
-
-        {/* Action Choices */}
-        <div className="space-y-3">
-          <button
-            onClick={() => handleConfirm("Cash")}
-            disabled={submitting}
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 cursor-pointer"
-          >
-            <span>💵</span>
-            {submitting ? "Processing..." : "Cash Collected at Counter"}
-          </button>
-          
-          <button
-            onClick={() => handleConfirm("Online")}
-            disabled={submitting}
-            className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 cursor-pointer"
-          >
-            <span>📱</span>
-            {submitting ? "Processing..." : "UPI / Card Received at Counter"}
-          </button>
-
+    <>
+      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-fadeIn">
+        <div className="bg-white rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl border border-slate-100 relative animate-scaleUp text-gray-800">
+          {/* Close Button */}
           <button
             onClick={onClose}
             disabled={submitting}
-            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl transition flex items-center justify-center active:scale-98 disabled:opacity-50 cursor-pointer"
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition cursor-pointer"
           >
-            Cancel & Keep Unpaid
+            ✕
           </button>
+
+          {/* Header Icon */}
+          <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100">
+            <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center text-3xl shadow-inner mb-3">
+              💵
+            </div>
+            <h3 className="text-xl font-black text-slate-800 tracking-tight">Confirm Payment Collection</h3>
+            <p className="text-slate-500 text-xs mt-1 max-w-xs">
+              This order is currently unpaid. Please confirm that you have collected the full amount at the counter before completing delivery.
+            </p>
+          </div>
+
+          {/* Order Info & Total */}
+          <div className="my-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm space-y-2">
+            <div className="flex justify-between text-slate-500">
+              <span>Customer:</span>
+              <span className="font-extrabold text-slate-800">{order.userId?.name || order.customerName || "Guest"}</span>
+            </div>
+            <div className="flex justify-between text-slate-500">
+              <span>Order Type:</span>
+              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider">
+                {order.payment?.method === "PayLater" ? "⏱ Pay Later at Counter" : "💵 Cash Payment"}
+              </span>
+            </div>
+            <div className="flex justify-between text-base font-extrabold text-slate-800 pt-2 border-t border-dashed border-slate-200">
+              <span>Grand Total Due:</span>
+              <span className="text-emerald-600 text-lg">₹{grandTotal}</span>
+            </div>
+          </div>
+
+          {/* Action Choices */}
+          <div className="space-y-3">
+            <button
+              onClick={() => handleConfirm("Cash")}
+              disabled={submitting}
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 cursor-pointer"
+            >
+              <span>💵</span>
+              {submitting ? "Processing..." : "Cash Collected at Counter"}
+            </button>
+            
+            <button
+              onClick={() => handleConfirm("Online")}
+              disabled={submitting}
+              className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 cursor-pointer"
+            >
+              <span>📱</span>
+              {submitting ? "Processing..." : "UPI / Card Received at Counter"}
+            </button>
+
+            <button
+              onClick={onClose}
+              disabled={submitting}
+              className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl transition flex items-center justify-center active:scale-98 disabled:opacity-50 cursor-pointer"
+            >
+              Cancel & Keep Unpaid
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* 💳 HIGH-FIDELITY QUICKBITE PAYMENT SANDBOX FALLBACK MODAL */}
+      {showMockPaymentModal && mockPaymentData && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md shadow-2xl p-6 md:p-8 animate-scaleDown text-white">
+            
+            {/* Header branding */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+              <div className="flex items-center space-x-2">
+                <span className="text-2xl font-bold">⚡</span>
+                <span className="font-extrabold text-lg tracking-wider bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                  RAZORPAY TEST GATEWAY
+                </span>
+              </div>
+              <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                Test Mode
+              </span>
+            </div>
+
+            {/* Price Details Card */}
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 mb-6 text-center shadow-inner">
+              <p className="text-slate-400 text-xs uppercase tracking-widest font-bold">Amount to Pay</p>
+              <h3 className="text-4xl font-black mt-2 text-white">
+                ₹{(mockPaymentData.order.amount / 100).toFixed(2)}
+              </h3>
+              <p className="text-slate-500 text-xs mt-1.5 font-mono">
+                Order ID: {mockPaymentData.order.id}
+              </p>
+            </div>
+
+            {/* Dummy Card Form Graphics */}
+            <div className="space-y-4 mb-6">
+              <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <span className="text-xl">💳</span>
+                  <div>
+                    <p className="text-xs text-slate-400 font-bold">Standard Test Card</p>
+                    <p className="text-sm font-mono text-slate-200 mt-0.5">4111 1111 1111 1111</p>
+                  </div>
+                </div>
+                <span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">VISA</span>
+              </div>
+
+              <div className="flex items-center space-x-2 text-xs text-slate-400">
+                <span>🛡️</span>
+                <span>Fully simulated secure end-to-end sandbox session.</span>
+              </div>
+            </div>
+
+            {/* Checkout Action Buttons */}
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowMockPaymentModal(false);
+                  setSubmitting(true);
+                  try {
+                    await mockPaymentData.options.handler({
+                      razorpay_order_id: mockPaymentData.order.id,
+                      razorpay_payment_id: `pay_mock_${Date.now()}`,
+                      razorpay_signature: "mock_signature_approved"
+                    });
+                  } catch (err) {
+                    console.error("Mock handler execution failed:", err);
+                    alert("Mock payment handler failed.");
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition duration-200 shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center space-x-2 text-base cursor-pointer"
+              >
+                <span>Simulate Payment</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMockPaymentModal(false);
+                  setSubmitting(false);
+                  alert("Payment cancelled by staff.");
+                }}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition duration-200 text-sm cursor-pointer"
+              >
+                Cancel Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
@@ -324,7 +484,7 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
 
   const normalizeStatusForApi = (label) => label.toLowerCase();
 
-  const handleSave = async (enforcedMethod = null, tokenVerified = false) => {
+  const handleSave = async (enforcedMethod = null, tokenVerified = false, razorpayOrderId = null, razorpayPaymentId = null) => {
     const payloadStatus = normalizeStatusForApi(newStatus);
     let paymentData = null;
 
@@ -338,7 +498,7 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
       if (enforcedMethod) {
         const payRes = await axios.put(
           `http://localhost:5001/api/order/${order._id}/payment-success`,
-          { method: enforcedMethod },
+          { method: enforcedMethod, razorpayOrderId, razorpayPaymentId },
           { withCredentials: true }
         );
         toast.success("Payment marked as successful!");
@@ -487,8 +647,8 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
         <CollectPaymentModal
           order={order}
           onClose={() => setShowPaymentCollect(false)}
-          onConfirm={async (method) => {
-            await handleSave(method);
+          onConfirm={async (method, razorpayOrderId = null, razorpayPaymentId = null) => {
+            await handleSave(method, false, razorpayOrderId, razorpayPaymentId);
             setShowPaymentCollect(false);
           }}
         />

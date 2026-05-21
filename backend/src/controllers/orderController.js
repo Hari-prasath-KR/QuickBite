@@ -307,7 +307,7 @@ export const getBranchOrdersToday = async (req, res) => {
 export const markPaymentSuccess = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { method } = req.body || {};
+    const { method, razorpayOrderId, razorpayPaymentId } = req.body || {};
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -316,6 +316,12 @@ export const markPaymentSuccess = async (req, res) => {
     order.payment.paid = true;
     if (method) {
       order.payment.method = method;
+    }
+    if (razorpayOrderId) {
+      order.payment.razorpayOrderId = razorpayOrderId;
+    }
+    if (razorpayPaymentId) {
+      order.payment.razorpayPaymentId = razorpayPaymentId;
     }
     order.tokenNumber = `TK-${order._id.toString().slice(-4).toUpperCase()}`;
     const saved = await order.save();

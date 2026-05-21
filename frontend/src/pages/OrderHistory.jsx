@@ -343,6 +343,23 @@ const OrderHistory = () => {
                 </div>
               </div>
 
+              {/* Food Verification Token in Bill */}
+              {selectedOrder.payment?.method === "PayLater" && !selectedOrder.payment?.paid ? (
+                <div className="bg-amber-50 border border-amber-200 border-dashed rounded-xl p-4 text-center my-4">
+                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Food Verification Token</p>
+                  <p className="text-xl font-extrabold text-amber-800 mt-1 uppercase">PENDING PAYMENT AT COUNTER</p>
+                  <p className="text-xxs text-slate-500 mt-1 font-semibold">Payment must be completed before food delivery.</p>
+                </div>
+              ) : (
+                <div className="bg-emerald-50 border border-emerald-200 border-dashed rounded-xl p-4 text-center my-4 animate-pulse">
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Food Verification Token</p>
+                  <p className="text-3xl font-black text-emerald-800 mt-1 tracking-wider">
+                    {selectedOrder.tokenNumber || `TK-${selectedOrder._id.toString().slice(-4).toUpperCase()}`}
+                  </p>
+                  <p className="text-xxs text-slate-500 mt-1 font-semibold">Show this token code at the counter to claim your food.</p>
+                </div>
+              )}
+
               {/* Items List Table */}
               <div>
                 <h4 className="font-bold text-slate-700 mb-3 border-b pb-1 text-sm uppercase">Order Summary</h4>
