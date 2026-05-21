@@ -27,8 +27,23 @@ function MorePage() {
   const [waitTime, setWaitTime] = useState(15);
   const [operationalMode, setOperationalMode] = useState("Normal");
 
-  // Daily Target orders - resets to 0 everyday until staff sets it
-  const [dailyTarget, setDailyTarget] = useState(() => {
+  // Daily Target orders (default 30 orders, adjusted by staff)
+  const [ordersTarget, setOrdersTarget] = useState(() => {
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const savedDate = localStorage.getItem("quickbite_orders_target_date");
+      const savedTarget = localStorage.getItem("quickbite_orders_target");
+      if (savedDate === todayStr && savedTarget) {
+        return parseInt(savedTarget);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return 30; // default target of 30 orders
+  });
+
+  // Daily Quality Compliance target - resets to 0 everyday until staff sets it
+  const [checklistTarget, setChecklistTarget] = useState(() => {
     try {
       const todayStr = new Date().toISOString().split("T")[0];
       const savedDate = localStorage.getItem("quickbite_checklist_target_date");
@@ -39,7 +54,7 @@ function MorePage() {
     } catch (e) {
       console.error(e);
     }
-    return 0; // 0 means not configured yet for today
+    return 0; // 0 means not configured yet for today (1-5 checks)
   });
 
   const [todayOrdersCount, setTodayOrdersCount] = useState(0);
@@ -218,8 +233,20 @@ function MorePage() {
     }
   };
 
-  const handleUpdateTarget = (val) => {
-    setDailyTarget(val);
+  const handleUpdateOrdersTarget = (val) => {
+    setOrdersTarget(val);
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      localStorage.setItem("quickbite_orders_target_date", todayStr);
+      localStorage.setItem("quickbite_orders_target", val.toString());
+    } catch (e) {
+      console.error(e);
+    }
+    toast.success(`Today's order target set to ${val} orders`);
+  };
+
+  const handleUpdateChecklistTarget = (val) => {
+    setChecklistTarget(val);
     try {
       const todayStr = new Date().toISOString().split("T")[0];
       localStorage.setItem("quickbite_checklist_target_date", todayStr);
@@ -227,7 +254,9 @@ function MorePage() {
     } catch (e) {
       console.error(e);
     }
-    toast.success(`Today's order target set to ${val} orders`);
+    if (val > 0) {
+      toast.success(`Quality compliance target set to ${val} tasks`);
+    }
   };
 
   const handleAddNotice = (e) => {
@@ -277,7 +306,9 @@ function MorePage() {
 
   // Stats derivations
   const completedChecks = checklist.filter((c) => c.completed).length;
-  const progressPercent = Math.round((completedChecks / checklist.length) * 100);
+  const progressPercent = checklistTarget > 0
+    ? Math.round((completedChecks / checklistTarget) * 100)
+    : 0;
 
   return (
     <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-green-400 via-yellow-200 to-white text-gray-800 font-sans overflow-hidden">
@@ -322,18 +353,18 @@ function MorePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center gap-2">
-                  <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Today's Target</p>
+                  <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Orders Target</p>
                   <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-slate-200/50">
                     <button
-                      onClick={() => handleUpdateTarget(Math.max(1, dailyTarget - 5))}
+                      onClick={() => handleUpdateOrdersTarget(Math.max(5, ordersTarget - 5))}
                       className="text-slate-600 hover:text-slate-800 font-extrabold text-xs focus:outline-none px-1"
                       title="Decrease Target"
                     >
                       -
                     </button>
-                    <span className="text-xs font-black text-slate-700 min-w-[28px] text-center">{dailyTarget}</span>
+                    <span className="text-xs font-black text-slate-700 min-w-[28px] text-center">{ordersTarget}</span>
                     <button
-                      onClick={() => handleUpdateTarget(Math.min(500, dailyTarget + 5))}
+                      onClick={() => handleUpdateOrdersTarget(Math.min(500, ordersTarget + 5))}
                       className="text-slate-600 hover:text-slate-800 font-extrabold text-xs focus:outline-none px-1"
                       title="Increase Target"
                     >
@@ -341,37 +372,26 @@ function MorePage() {
                     </button>
                   </div>
                 </div>
-                {dailyTarget === 0 ? (
-                  <>
-                    <h3 className="text-sm font-extrabold text-slate-600 mt-1">Pending target setup</h3>
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mt-1">
-                      Set target to active tracker
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-xl font-black text-slate-800 mt-0.5">
-                      {todayOrdersCount} / {dailyTarget} Orders
-                    </h3>
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mt-1 flex justify-between items-center">
-                      <span>{dailyTarget > 0 ? Math.round((todayOrdersCount / dailyTarget) * 100) : 0}% Fulfilled</span>
-                      <span>
-                        {todayOrdersCount >= dailyTarget 
-                          ? "🎉 Daily Target Achieved!" 
-                          : `${Math.max(0, dailyTarget - todayOrdersCount)} more to target`}
-                      </span>
-                    </p>
-                  </>
-                )}
+                <h3 className="text-xl font-black text-slate-800 mt-0.5">
+                  {ordersTarget > 0 ? Math.round((todayOrdersCount / ordersTarget) * 100) : 0}% Complete
+                </h3>
+                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mt-1 flex justify-between items-center">
+                  <span>{todayOrdersCount} / {ordersTarget} Orders</span>
+                  <span>
+                    {todayOrdersCount >= ordersTarget 
+                      ? "🎉 Goal Achieved!" 
+                      : `${Math.max(0, ordersTarget - todayOrdersCount)} more to target`}
+                  </span>
+                </p>
                 {/* Visual Progress Bar based on target progress */}
                 <div className="w-full bg-slate-200/50 rounded-full h-1.5 mt-2 overflow-hidden border border-white/20">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      dailyTarget > 0 && todayOrdersCount >= dailyTarget
+                      ordersTarget > 0 && todayOrdersCount >= ordersTarget
                         ? "bg-gradient-to-r from-emerald-400 to-green-500 shadow-sm"
                         : "bg-gradient-to-r from-amber-400 to-yellow-500"
                     }`}
-                    style={{ width: `${dailyTarget > 0 ? Math.min(100, Math.round((todayOrdersCount / dailyTarget) * 100)) : 0}%` }}
+                    style={{ width: `${ordersTarget > 0 ? Math.min(100, Math.round((todayOrdersCount / ordersTarget) * 100)) : 0}%` }}
                   ></div>
                 </div>
               </div>
@@ -481,36 +501,38 @@ function MorePage() {
                   <h3 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
                     <FaClipboardCheck className="text-green-600" /> Operational Quality Log
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      {completedChecks}/{checklist.length} Done
-                    </span>
-                    <span className="px-2 py-1 bg-green-500/10 border border-green-500/20 text-green-700 rounded-lg text-xs font-black shadow-sm">
-                      {progressPercent}%
-                    </span>
-                  </div>
+                  {checklistTarget > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {completedChecks}/{checklistTarget} Checked
+                      </span>
+                      <span className="px-2 py-1 bg-green-500/10 border border-green-500/20 text-green-700 rounded-lg text-xs font-black shadow-sm">
+                        {progressPercent}%
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Checklist Directory / Setup Panel */}
-                {dailyTarget === 0 ? (
+                {checklistTarget === 0 ? (
                   <div className="bg-white/50 backdrop-blur-md rounded-2xl p-5 border border-amber-300/30 text-center space-y-4">
                     <div className="mx-auto h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 animate-bounce">
-                      <FaTrophy size={20} />
+                      <FaClipboardCheck size={20} />
                     </div>
                     <div>
-                      <h4 className="font-extrabold text-sm text-slate-850">Today's Order Target Unset</h4>
+                      <h4 className="font-extrabold text-sm text-slate-850">Quality Checks Target Unset</h4>
                       <p className="text-xs text-slate-500 mt-1">
-                        Please configure today's order fulfillment target to start logging and tracking shift performance.
+                        Please set today's target (number of quality checks to complete) to start logging shift compliance.
                       </p>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[15, 30, 50, 100].map((t) => (
+                    <div className="grid grid-cols-5 gap-2">
+                      {[1, 2, 3, 4, 5].map((t) => (
                         <button
                           key={t}
-                          onClick={() => handleUpdateTarget(t)}
+                          onClick={() => handleUpdateChecklistTarget(t)}
                           className="py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
                         >
-                          {t} Orders
+                          {t} {t === 1 ? "Task" : "Tasks"}
                         </button>
                       ))}
                     </div>
@@ -519,28 +541,30 @@ function MorePage() {
                       <span className="text-xs font-bold text-slate-500">Custom Target:</span>
                       <input
                         type="number"
-                        id="custom-target-input"
-                        placeholder="e.g. 20"
+                        id="custom-checklist-target-input"
+                        min="1"
+                        max="5"
+                        placeholder="e.g. 4"
                         className="w-16 px-2 py-1 bg-white border border-slate-350 rounded-lg text-xs font-bold text-slate-700 text-center shadow-sm"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             const val = parseInt(e.target.value);
-                            if (val > 0) {
-                              handleUpdateTarget(val);
+                            if (val >= 1 && val <= 5) {
+                              handleUpdateChecklistTarget(val);
                             } else {
-                              toast.error("Please enter a valid target number.");
+                              toast.error("Please enter a target number between 1 and 5.");
                             }
                           }
                         }}
                       />
                       <button
                         onClick={() => {
-                          const input = document.getElementById("custom-target-input");
+                          const input = document.getElementById("custom-checklist-target-input");
                           const val = parseInt(input?.value);
-                          if (val > 0) {
-                            handleUpdateTarget(val);
+                          if (val >= 1 && val <= 5) {
+                            handleUpdateChecklistTarget(val);
                           } else {
-                            toast.error("Please enter a valid target number.");
+                            toast.error("Please enter a target number between 1 and 5.");
                           }
                         }}
                         className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white font-extrabold text-xs rounded-lg transition active:scale-95 cursor-pointer shadow-sm"
@@ -550,29 +574,66 @@ function MorePage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
-                    {checklist.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => handleToggleChecklist(item.id)}
-                        className={`p-3 border rounded-2xl flex items-center gap-3 transition-all cursor-pointer select-none active:scale-[0.99] shadow-sm ${
-                          item.completed
-                            ? "bg-green-500/5 border-green-500/20 text-slate-800"
-                            : "bg-white/40 border-white/40 text-slate-600 hover:bg-white/60"
-                        }`}
-                      >
-                        <button className="focus:outline-none flex-shrink-0">
-                          {item.completed ? (
-                            <FaCheckCircle size={18} className="text-green-600" />
-                          ) : (
-                            <div className="h-[18px] w-[18px] border-2 border-slate-300 rounded-full bg-white transition-all hover:border-slate-500" />
-                          )}
-                        </button>
-                        <span className={`text-xs font-bold ${item.completed ? "line-through text-slate-400" : ""}`}>
-                          {item.task}
+                  <div className="space-y-3.5">
+                    {/* Visual Target Progress Percentage Bar */}
+                    <div className="bg-white/40 border border-white/50 p-4 rounded-2xl shadow-sm space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-black text-slate-700 uppercase tracking-wide">
+                          Compliance Progress
+                        </span>
+                        <span className="text-xs font-black text-green-700 bg-green-500/10 px-2 py-0.5 rounded-lg border border-green-500/15">
+                          {progressPercent}% Complete
                         </span>
                       </div>
-                    ))}
+                      
+                      {/* Visual Percentage Loading Bar */}
+                      <div className="w-full bg-slate-200/50 rounded-full h-2 overflow-hidden border border-white/20 shadow-inner">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            progressPercent >= 100
+                              ? "bg-gradient-to-r from-emerald-400 to-green-500 shadow-sm"
+                              : "bg-gradient-to-r from-amber-400 to-yellow-500"
+                          }`}
+                          style={{ width: `${Math.min(100, progressPercent)}%` }}
+                        ></div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                        <span>{completedChecks} / {checklistTarget} Tasks Marked</span>
+                        <button
+                          onClick={() => handleUpdateChecklistTarget(0)}
+                          className="text-slate-500 hover:text-green-700 font-extrabold hover:underline"
+                        >
+                          Change Target ({checklistTarget})
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Predefined Checklist Items */}
+                    <div className="space-y-2.5">
+                      {checklist.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => handleToggleChecklist(item.id)}
+                          className={`p-3 border rounded-2xl flex items-center gap-3 transition-all cursor-pointer select-none active:scale-[0.99] shadow-sm ${
+                            item.completed
+                              ? "bg-green-500/5 border-green-500/20 text-slate-800"
+                              : "bg-white/40 border-white/40 text-slate-600 hover:bg-white/60"
+                          }`}
+                        >
+                          <button className="focus:outline-none flex-shrink-0">
+                            {item.completed ? (
+                              <FaCheckCircle size={18} className="text-green-600" />
+                            ) : (
+                              <div className="h-[18px] w-[18px] border-2 border-slate-300 rounded-full bg-white transition-all hover:border-slate-500" />
+                            )}
+                          </button>
+                          <span className={`text-xs font-bold ${item.completed ? "line-through text-slate-400" : ""}`}>
+                            {item.task}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
