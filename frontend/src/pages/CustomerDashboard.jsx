@@ -26,6 +26,10 @@ const CustomerDashboard = () => {
   const [showBranchPopup, setShowBranchPopup] = useState(false);
   const navigate = useNavigate();
 
+  const triggerSearch = () => {
+    window.dispatchEvent(new CustomEvent('open-quickbite-search'));
+  };
+
   useEffect(() => {
     const fetchCaterings = async () => {
       try {
@@ -77,6 +81,17 @@ const CustomerDashboard = () => {
                 Skip the queue. Order delicious meals from your favorite campus
                 caterings and get back to what matters.
               </p>
+              {/* Modern Glassmorphic Search Bar Trigger */}
+              <div className="mt-6 max-w-md cursor-pointer group animate-fade-in" onClick={triggerSearch}>
+                <div className="flex items-center gap-3 bg-white/45 backdrop-blur-md border border-white/30 rounded-2xl px-5 py-3.5 shadow-sm hover:shadow-md hover:scale-[1.01] transition duration-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-800 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <span className="text-slate-500 font-semibold text-sm">
+                    Search branches, caterings, locations, or dishes...
+                  </span>
+                </div>
+              </div>
               <div className="mt-8 flex gap-4">
                 <button
                   onClick={() => document.getElementById('caterings').scrollIntoView({ behavior: 'smooth' })}

@@ -21,6 +21,8 @@ import staffRoutes from "./routes/staffRoutes.js"
 import branchAnalyticsRoutes from "./routes/branchAnalyticsRoutes.js";
 import cateringAdminRoutes from "./routes/cateringAdminRoutes.js";
 import customerMenuRoutes from "./routes/customerMenuRoutes.js";
+import searchRoutes from "./routes/searchRoutes.js";
+
 
 
 const PORT=process.env.PORT||5001
@@ -72,6 +74,8 @@ app.use("/api/branch-analystics", branchAnalyticsRoutes);
 app.use("/api/catering-admin", cateringAdminRoutes);
 app.use("/api/catering-admin",menuItemRoutes);
 app.use("/api/menu", customerMenuRoutes);
+app.use("/api/search", searchRoutes);
+
 
 // app.get('/api/test', (req, res) => {
 //   res.json({ message: 'API is working!' });
