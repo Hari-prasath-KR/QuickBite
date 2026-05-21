@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import StaffNavbar from "../../components/StaffNavbar";
@@ -995,13 +996,13 @@ function OrderPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowOfflineModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-2xl shadow-sm transition active:scale-95 cursor-pointer"
+            <Link
+              to="/staff/service"
+              className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-2xl shadow-sm transition active:scale-95 cursor-pointer flex justify-center"
             >
               <FaUtensils className="text-xs" />
               New Offline Order
-            </button>
+            </Link>
             <button
               onClick={refreshOrders}
               disabled={refreshing || loading}
