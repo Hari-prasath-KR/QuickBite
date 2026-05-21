@@ -17,6 +17,7 @@ import {
   FaToggleOff,
   FaArrowUp
 } from "react-icons/fa";
+import { MdOutlineRestaurantMenu } from "react-icons/md";
 
 function MenuPage() {
   const [user, setUser] = useState(null);
@@ -131,30 +132,32 @@ function MenuPage() {
       <StaffNavbar />
 
       {/* Main Container */}
-      <div className="pt-24 pb-28 px-4 md:px-8 flex-1 flex flex-col overflow-hidden max-w-7xl w-full mx-auto">
+      <div className="pt-24 pb-28 px-4 md:px-8 flex-1 flex flex-col overflow-hidden max-w-7xl w-full mx-auto space-y-6">
         
-        {/* Header Title & Refresh */}
-        <div className="flex justify-between items-center mb-6">
+        {/* Header Block matching the Order Page exactly */}
+        <div className="flex flex-wrap justify-between items-center gap-4 bg-white/45 backdrop-blur-md border border-white/35 rounded-3xl p-6 shadow-xl">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-800 flex items-center gap-2">
-              Branch Inventory Manager <span className="text-xs px-2.5 py-1 bg-green-500/20 text-green-700 border border-green-500/20 rounded-full font-bold">Live</span>
-            </h2>
-            <p className="text-xs md:text-sm text-slate-700 mt-1 font-medium">
-              Manage real-time availability, stock quantities, and items listed for online & offline orders.
+            <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+              <MdOutlineRestaurantMenu className="text-green-600" /> Branch Inventory Manager
+            </h1>
+            <p className="text-sm font-semibold text-slate-500 mt-1">
+              Manage real-time availability, stock quantities, pricing, and listed items.
             </p>
           </div>
-          <button
-            onClick={fetchProfileAndData}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-white/70 backdrop-blur-md border border-white/50 rounded-xl hover:bg-white/90 transition-all font-bold text-sm active:scale-95 disabled:opacity-50 text-slate-700 shadow-md"
-          >
-            <FaSync className={`${loading ? "animate-spin text-green-500" : ""}`} />
-            <span className="hidden sm:inline">Refresh Data</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchProfileAndData}
+              disabled={loading}
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white font-bold text-sm rounded-2xl shadow-sm transition active:scale-95 cursor-pointer"
+            >
+              <FaSync className={`text-xs ${loading ? "animate-spin" : ""}`} />
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
         </div>
 
         {/* Dynamic Statistics Board */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white/45 backdrop-blur-xl border border-white/40 p-4 rounded-2xl flex items-center gap-4 transition-all hover:scale-[1.02] shadow-lg">
             <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 rounded-xl">
               <FaClipboardList size={20} />
@@ -196,51 +199,51 @@ function MenuPage() {
           </div>
         </div>
 
-        {/* Filter Control Bar */}
-        <div className="bg-white/45 backdrop-blur-xl border border-white/40 p-4 rounded-2xl flex flex-col gap-4 shadow-xl mb-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* Search Input */}
-            <div className="relative w-full md:w-80">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <FaSearch />
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search dish by name or keyword..."
-                className="w-full bg-white/70 border border-white/50 pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-green-500 text-slate-800 placeholder-slate-400 transition-colors"
-              />
-            </div>
-
-            {/* Stock Status Selector */}
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <span className="text-xs font-black text-slate-500 uppercase tracking-wider hidden lg:inline">Stock Filter:</span>
-              <select
-                value={selectedStockStatus}
-                onChange={(e) => setSelectedStockStatus(e.target.value)}
-                className="w-full md:w-52 bg-white/70 border border-white/50 text-slate-700 py-2.5 px-3 rounded-xl text-sm focus:outline-none focus:border-green-500 transition-colors font-semibold"
-              >
-                <option value="all">All Inventory States</option>
-                <option value="inStock">{"In Stock (>= 10)"}</option>
-                <option value="lowStock">{"Low Stock (< 10)"}</option>
-                <option value="outOfStock">{"Out of Stock (0)"}</option>
-                <option value="unavailable">{"Unavailable (Disabled)"}</option>
-              </select>
-            </div>
+        {/* Compact Filter Control Bar (Medium Height) */}
+        <div className="bg-white/45 backdrop-blur-xl border border-white/35 px-4 py-3 rounded-2xl flex flex-wrap lg:flex-nowrap items-center gap-3 shadow-md">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-60 flex-shrink-0">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <FaSearch size={14} />
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search dish name..."
+              className="w-full bg-white/70 border border-white/50 pl-9 pr-3 py-2 rounded-xl text-sm focus:outline-none focus:border-green-500 text-slate-800 placeholder-slate-400 transition-colors"
+            />
           </div>
 
+          {/* Stock Status Selector */}
+          <div className="flex items-center gap-1.5 w-full sm:w-auto flex-shrink-0">
+            <select
+              value={selectedStockStatus}
+              onChange={(e) => setSelectedStockStatus(e.target.value)}
+              className="w-full sm:w-40 bg-white/70 border border-white/50 text-slate-700 py-2 px-3 rounded-xl text-sm focus:outline-none focus:border-green-500 transition-colors font-semibold"
+            >
+              <option value="all">All States</option>
+              <option value="inStock">{"In Stock (>= 10)"}</option>
+              <option value="lowStock">{"Low Stock (< 10)"}</option>
+              <option value="outOfStock">{"Out of Stock (0)"}</option>
+              <option value="unavailable">{"Unavailable"}</option>
+            </select>
+          </div>
+
+          {/* Vertical Divider */}
+          <div className="hidden lg:block h-8 w-px bg-slate-200"></div>
+
           {/* Dynamic Scrolling Category Chips */}
-          <div className="border-t border-slate-200/50 pt-3 flex items-center gap-2 overflow-x-auto scrollbar-none">
-            <span className="text-xs font-black text-slate-500 uppercase tracking-wider flex-shrink-0 mr-2">Categories:</span>
-            <div className="flex gap-2 pb-1">
+          <div className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto scrollbar-none">
+            <span className="text-xs font-black text-slate-500 uppercase tracking-wider flex-shrink-0">Categories:</span>
+            <div className="flex gap-1.5 py-0.5">
               {categories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap active:scale-95 border ${
                     selectedCategory === cat
-                      ? "bg-green-500 text-white border-green-500 shadow-md shadow-green-500/20"
+                      ? "bg-green-500 text-white border-green-500 shadow-md shadow-green-500/10"
                       : "bg-white/60 text-slate-600 border-white/50 hover:bg-white/80 hover:text-slate-800"
                   }`}
                 >
@@ -355,14 +358,37 @@ function MenuPage() {
                           {dish.description || "No description provided for this culinary selection."}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded">
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded flex-shrink-0">
                             {dish.category || "Uncategorized"}
                           </span>
-                          <span className="text-slate-850 font-extrabold text-sm">
-                            ₹{item.price}
-                          </span>
-                          {item.price !== dish.defaultPrice && (
-                            <span className="text-[9px] text-slate-400 font-semibold line-through">
+                          
+                          {/* Dynamic Interactive Price Editor */}
+                          <div className="flex items-center bg-white/70 border border-white/50 rounded-lg px-1.5 py-0.5 shadow-sm max-w-[72px]" title="Click to edit Price">
+                            <span className="text-slate-400 text-xs font-bold mr-0.5">₹</span>
+                            <input
+                              type="text"
+                              value={item.price}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setMenuItems((prev) =>
+                                  prev.map((p) => (p._id === item._id ? { ...p, price: val } : p))
+                                );
+                              }}
+                              onBlur={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val) && val >= 0) {
+                                  handleUpdateAssignment(item._id, { price: val });
+                                } else {
+                                  toast.error("Invalid price entered.");
+                                  fetchProfileAndData();
+                                }
+                              }}
+                              className="w-full bg-transparent font-extrabold text-xs text-slate-800 focus:outline-none text-right"
+                            />
+                          </div>
+
+                          {parseFloat(item.price) !== dish.defaultPrice && (
+                            <span className="text-[9px] text-slate-400 font-semibold line-through" title={`Default Price: ₹${dish.defaultPrice}`}>
                               ₹{dish.defaultPrice}
                             </span>
                           )}
