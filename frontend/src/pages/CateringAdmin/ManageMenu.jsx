@@ -145,28 +145,32 @@ function ManageMenu() {
     return (
         <div className=" bg-gradient-to-br from-green-400 via-yellow-200 to-white min-h-screen">
             <MenuPageNavbar onAddItemClick={openModal} />
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 px-5 rounded-lg ">
-                <div className="w-full md:w-auto">
-                    <label htmlFor="category-filter" className="text-lg font-medium text-gray-600">Category</label>
+            <div className="mx-5 mb-8 p-5 bg-white/35 backdrop-blur-xl border border-white/30 rounded-3xl shadow-xl flex flex-col md:flex-row gap-6 items-center">
+                <div className="w-full md:w-auto flex flex-col gap-1.5 flex-1 md:max-w-xs">
+                    <label htmlFor="category-filter" className="text-xs font-black uppercase tracking-widest text-slate-700 ml-1">
+                        🍽️ Filter by Category
+                    </label>
                     <select
                         id="category-filter"
-                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+                        className="w-full pl-4 pr-10 py-3 text-sm font-bold text-slate-800 bg-white/45 backdrop-blur-md border border-white/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/50 hover:bg-white/60 transition duration-300 shadow-sm cursor-pointer"
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
                     >
-                        <option>All</option>
-                        <option>Appetizer</option>
-                        <option>Main Course</option>
-                        <option>Dessert</option>
-                        <option>Beverage</option>
-                        <option>Uncategorized</option>
+                        <option value="All">All Categories</option>
+                        <option value="Appetizer">Appetizer</option>
+                        <option value="Main Course">Main Course</option>
+                        <option value="Dessert">Dessert</option>
+                        <option value="Beverage">Beverage</option>
+                        <option value="Uncategorized">Uncategorized</option>
                     </select>
                 </div>
-                <div className="w-full md:w-auto">
-                    <label htmlFor="branch-filter" className="text-lg font-medium text-gray-400">Branch</label>
+                <div className="w-full md:w-auto flex flex-col gap-1.5 flex-1 md:max-w-xs">
+                    <label htmlFor="branch-filter" className="text-xs font-black uppercase tracking-widest text-slate-700 ml-1">
+                        📍 Filter by Branch
+                    </label>
                     <select
                         id="branch-filter"
-                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+                        className="w-full pl-4 pr-10 py-3 text-sm font-bold text-slate-800 bg-white/45 backdrop-blur-md border border-white/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/50 hover:bg-white/60 transition duration-300 shadow-sm cursor-pointer"
                         value={selectedBranch}
                         onChange={(e) => setSelectedBranch(e.target.value)}
                     >
