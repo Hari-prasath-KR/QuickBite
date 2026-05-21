@@ -6,7 +6,8 @@ import {
   updateOrderStatus, 
   createRazorpayOrder, 
   verifyRazorpayPayment, 
-  getCustomerOrders 
+  getCustomerOrders,
+  getBranchOrdersToday
 } from "../controllers/orderController.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -16,6 +17,7 @@ router.post("/", addOrder); // Single order
 router.post("/bulk", addOrdersBulk); // Bulk insert
 router.get("/", getOrders); // Get all orders
 router.put("/:orderId/status", updateOrderStatus); // Update order status
+router.get("/branch/:branchId/today", requireAuth, getBranchOrdersToday); // Get branch's today's orders
 
 // Razorpay & Customer History Routes
 router.post("/razorpay-order", createRazorpayOrder);

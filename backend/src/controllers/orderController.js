@@ -230,3 +230,36 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
+export const getBranchOrdersToday = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+    const { date } = req.query;
+
+    let start, end;
+    if (date) {
+      start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start = new Date();
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setHours(23, 59, 59, 999);
+    }
+
+    const orders = await Order.find({
+      branchId,
+      createdAt: { $gte: start, $lte: end }
+    })
+      .populate("userId", "name email")
+      .populate("items.itemId", "name price")
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (error) {
+    console.error("getBranchOrdersToday error:", error);
+    res.status(500).json({ message: "Failed to fetch today's orders", error: error.message });
+  }
+};
+
