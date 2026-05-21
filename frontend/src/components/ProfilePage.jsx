@@ -12,7 +12,9 @@ import {
   Lock, 
   LogOut, 
   Edit3, 
-  Loader2 
+  Loader2,
+  Trophy,
+  Gift
 } from 'lucide-react';
 
 const ProfilePage = () => {
@@ -139,6 +141,45 @@ const ProfilePage = () => {
     );
   }
 
+  const orderCount = user.orderCount || 0;
+  const points = orderCount * 10;
+  
+  // Calculate tier details dynamically based on points
+  let tierName = "Bronze";
+  let tierColor = "text-orange-600 bg-orange-100/60 border-orange-300 font-bold";
+  let nextTier = "Silver";
+  let pointsToNext = 100 - points;
+  let progressPercentage = (points / 100) * 100;
+  
+  if (points >= 1000) {
+    tierName = "Platinum";
+    tierColor = "text-violet-600 bg-violet-100/60 border-violet-300 font-extrabold";
+    nextTier = "Max Level 👑";
+    pointsToNext = 0;
+    progressPercentage = 100;
+  } else if (points >= 500) {
+    tierName = "Gold";
+    tierColor = "text-amber-600 bg-amber-100/60 border-amber-300 font-bold";
+    nextTier = "Platinum";
+    pointsToNext = 1000 - points;
+    progressPercentage = ((points - 500) / 500) * 100;
+  } else if (points >= 100) {
+    tierName = "Silver";
+    tierColor = "text-slate-600 bg-slate-100/60 border-slate-300 font-bold";
+    nextTier = "Gold";
+    pointsToNext = 500 - points;
+    progressPercentage = ((points - 100) / 400) * 100;
+  } else {
+    tierName = "Bronze";
+    tierColor = "text-orange-600 bg-orange-100/60 border-orange-300 font-bold";
+    nextTier = "Silver";
+    pointsToNext = 100 - points;
+    progressPercentage = (points / 100) * 100;
+  }
+
+  // Calculate wallet dynamically: starter campus credits ₹500, plus ₹50 for every 10 orders
+  const walletAmount = 500 + Math.floor(orderCount / 10) * 50;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white font-sans">
       {/* Navigation header */}
@@ -200,11 +241,11 @@ const ProfilePage = () => {
             {/* Bio stats */}
             <div className="w-full grid grid-cols-2 gap-4 mt-8 border-t border-slate-900/10 pt-6">
               <div className="text-center">
-                <span className="block text-2xl font-black text-slate-800">540</span>
+                <span className="block text-2xl font-black text-slate-800">{points}</span>
                 <span className="text-[10px] uppercase font-bold text-slate-600 tracking-wider">Loyalty Pts</span>
               </div>
               <div className="text-center">
-                <span className="block text-2xl font-black text-slate-800">Gold</span>
+                <span className={`block text-2xl font-black ${tierColor.split(" ")[0]}`}>{tierName}</span>
                 <span className="text-[10px] uppercase font-bold text-slate-600 tracking-wider">Tier level</span>
               </div>
             </div>
@@ -263,19 +304,49 @@ const ProfilePage = () => {
                     </div>
                   </div>
                   
-                  <div className="bg-white/45 border border-white/20 p-4 rounded-2xl shadow-sm flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-emerald-100 rounded-lg">
-                        <Lock className="text-emerald-600 w-5 h-5" />
+                  {/* Dynamic Next Milestone Tracker Card */}
+                  <div className="bg-white/45 border border-white/20 p-5 rounded-2xl shadow-sm flex flex-col gap-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+                          <Trophy className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <span className="block text-xs uppercase font-extrabold text-slate-500 tracking-wider">Loyalty Milestone Tracker</span>
+                          <span className="text-sm font-black text-slate-800">
+                            {points >= 1000 
+                              ? "Ultimate Tier Unlocked! 👑" 
+                              : `Next Tier Target: ${nextTier}`}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-left">
-                        <span className="block text-xs uppercase font-bold text-slate-500">Security Verification</span>
-                        <span className="text-sm font-semibold text-emerald-800">Verified Secure Session</span>
+                      <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full uppercase tracking-wider">
+                        Active Quest
+                      </span>
+                    </div>
+
+                    {/* Progress Slider */}
+                    <div className="w-full mt-1">
+                      <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
+                        <span>Current: {points} pts</span>
+                        <span>
+                          {points >= 1000 
+                            ? "1000+ pts" 
+                            : `Goal: ${points + pointsToNext} pts`}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200/50 rounded-full h-3 overflow-hidden border border-white/30">
+                        <div 
+                          className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-700 ease-out" 
+                          style={{ width: `${progressPercentage}%` }}
+                        />
                       </div>
                     </div>
-                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
-                      Verified
-                    </span>
+
+                    <p className="text-[10px] text-slate-600 font-semibold leading-relaxed">
+                      🔥 Each campus order boosts your portfolio by **10 points**. 
+                      {points < 1000 && ` Just ${pointsToNext / 10} more orders needed to claim your shiny new ${nextTier} status!`}
+                    </p>
                   </div>
                   
                   <div className="pt-4 flex gap-4">
@@ -317,7 +388,7 @@ const ProfilePage = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest block">QuickBite Wallet Card</span>
-                        <span className="text-2xl font-black mt-1 block">₹2,450.00</span>
+                        <span className="text-2xl font-black mt-1 block">₹{walletAmount.toLocaleString("en-IN")}.00</span>
                       </div>
                       <span className="text-xl font-extrabold italic tracking-tight text-yellow-400">QuickBite</span>
                     </div>
@@ -334,9 +405,29 @@ const ProfilePage = () => {
                     </div>
                   </div>
                   
-                  <div className="bg-white/45 border border-white/20 p-4 rounded-2xl shadow-sm flex justify-between items-center">
-                    <span className="text-sm font-bold text-slate-700">Quick top-up available at checkout</span>
-                    <span className="text-xs font-black uppercase text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">Secure Payments</span>
+                  {/* Dynamic Wallet Rewards Breakdown */}
+                  <div className="bg-white/45 border border-white/20 p-5 rounded-2xl shadow-sm flex flex-col gap-2.5">
+                    <div className="flex justify-between items-center text-xs font-black uppercase text-slate-500 tracking-wider">
+                      <span>Dynamic Credits Summary</span>
+                      <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[9px]">
+                        <Gift className="w-3 h-3" /> Auto-Reload Active
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm font-bold text-slate-700">
+                      <span>Starter Campus Credit</span>
+                      <span>₹500.00</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm font-bold text-emerald-700">
+                      <span>Order Loyalty Bonus (₹50 per 10 orders)</span>
+                      <span>+₹{Math.floor(orderCount / 10) * 50}.00</span>
+                    </div>
+                    
+                    <div className="border-t border-slate-200/60 mt-2 pt-2.5 flex justify-between items-center text-[10px] text-slate-500 font-bold">
+                      <span>Total orders placed: {orderCount}</span>
+                      <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                        {10 - (orderCount % 10)} orders left for next reward
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}

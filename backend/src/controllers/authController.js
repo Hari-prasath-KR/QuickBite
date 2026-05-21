@@ -2,6 +2,7 @@ import User from "../models/user.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import Order from "../models/order.js";
 
 dotenv.config();
 //console.log("JWT_SECRET from env:", process.env.JWT_SECRET);
@@ -84,7 +85,11 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ msg: "User not found" });
     }
 
-    res.json({ data: user });
+    const orderCount = await Order.countDocuments({ userId: decoded.id });
+    const userObj = user.toObject();
+    userObj.orderCount = orderCount;
+
+    res.json({ data: userObj });
 
   } catch (err) {
     if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {

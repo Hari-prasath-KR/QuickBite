@@ -1,6 +1,7 @@
 import User from "../models/user.js";
 import cloudinary from "../config/cloudinary.js";
 import fs from "fs";
+import Order from "../models/order.js";
 
 export const getUserById = async (req, res) => {
   try {
@@ -77,13 +78,17 @@ export const uploadProfilePhoto = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const orderCount = await Order.countDocuments({ userId });
+    const userObj = user.toObject();
+    userObj.orderCount = orderCount;
+
     res.json({
       success: true,
       message: isCloudinaryConfigured 
         ? "Profile photo uploaded successfully to Cloudinary" 
         : "Profile photo uploaded successfully (Sandbox Sandbox Mode)",
       url: profilePhotoUrl,
-      user,
+      user: userObj,
     });
   } catch (error) {
     console.error("Error uploading profile photo:", error);
@@ -116,10 +121,14 @@ export const updateProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const orderCount = await Order.countDocuments({ userId });
+    const userObj = user.toObject();
+    userObj.orderCount = orderCount;
+
     res.json({
       success: true,
       message: "Profile updated successfully",
-      user,
+      user: userObj,
     });
   } catch (error) {
     console.error("Error updating profile:", error);
