@@ -14,6 +14,9 @@ const orderSchema = new mongoose.Schema({
     items: [orderItemSchema],
     total: { type: Number, required: true },
     status: { type: String, default: "pending" }, // pending, preparing, completed
+    table: { type: String, default: "" },
+    customerName: { type: String, default: "" },
+    tokenNumber: { type: String, default: "" },
     payment: {
         method: String,
         razorpayOrderId: String,

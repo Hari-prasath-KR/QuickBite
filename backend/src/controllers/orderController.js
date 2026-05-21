@@ -17,26 +17,51 @@ const getRazorpayInstance = () => {
 // ➕ Add a new order (simple direct method)
 export const addOrder = async (req, res) => {
   try {
-    const { userId, cateringId, branchId, items, total, status, payment } = req.body;
-    if (!userId || !cateringId || !items || items.length === 0 || !total) {
-      return res.status(400).json({ message: "userId, cateringId, items[], and total are required" });
+    const { userId, cateringId, branchId, items, total, status, payment, table, customerName } = req.body;
+    if (!cateringId || !items || items.length === 0 || !total) {
+      return res.status(400).json({ message: "cateringId, items[], and total are required" });
     }
+    
+    // We create the order first to get its _id, so we can generate a valid, unique token number
     const newOrder = new Order({
-      userId,
+      userId: userId || null,
       cateringId,
       branchId: branchId || null,
       items,
       total,
       status: status || "pending",
+      table: table || "",
+      customerName: customerName || "",
       payment: {
-        method: "Online", // force online
+        method: payment?.method || "Online",
         razorpayOrderId: payment?.razorpayOrderId || null,
         razorpayPaymentId: payment?.razorpayPaymentId || null,
         paid: payment?.paid || false,
       }
     });
+
+    // If paid immediately, let's generate the token number based on the pre-saved order ID
+    if (newOrder.payment.paid) {
+      newOrder.tokenNumber = `TK-${newOrder._id.toString().slice(-4).toUpperCase()}`;
+    }
+
     const savedOrder = await newOrder.save();
-    res.status(201).json(savedOrder);
+    
+    // Populate details just in case
+    const populated = await Order.findById(savedOrder._id)
+      .populate("userId", "name email")
+      .populate("items.itemId", "name price");
+
+    // Emit event via socket.io for real-time dashboard updates!
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("orderCreated", {
+        orderId: savedOrder._id.toString(),
+        branchId: savedOrder.branchId?.toString()
+      });
+    }
+
+    res.status(201).json(populated || savedOrder);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -260,6 +285,40 @@ export const getBranchOrdersToday = async (req, res) => {
   } catch (error) {
     console.error("getBranchOrdersToday error:", error);
     res.status(500).json({ message: "Failed to fetch today's orders", error: error.message });
+  }
+};
+
+// 💳 Mark Cash Payment as Successful and Generate Token
+export const markPaymentSuccess = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    order.payment.paid = true;
+    order.tokenNumber = `TK-${order._id.toString().slice(-4).toUpperCase()}`;
+    const saved = await order.save();
+
+    const populated = await Order.findById(saved._id)
+      .populate("userId", "name email")
+      .populate("items.itemId", "name price");
+
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("orderUpdated", {
+        orderId: saved._id.toString(),
+        status: saved.status,
+        branchId: saved.branchId?.toString(),
+        paymentPaid: true,
+        tokenNumber: saved.tokenNumber
+      });
+    }
+
+    res.json(populated || saved);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
