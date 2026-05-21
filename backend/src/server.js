@@ -63,6 +63,7 @@ app.use("/api/branch", branchRoutes);
 app.use("/api/menuitem", menuItemRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/user", userRoutes);
 app.get("/api/profile", (req, res) => {
   res.json({ msg: "Protected route", user: req.user });
 });

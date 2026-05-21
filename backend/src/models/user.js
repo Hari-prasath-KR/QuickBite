@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
   logo:{
         type:String
   },
+  profilePhotoUrl: {
+        type: String,
+        default: ""
+  },
   role: {
     type: String,
     enum: ["customer", "staff", "cateringAdmin", "collegeAdmin"],
