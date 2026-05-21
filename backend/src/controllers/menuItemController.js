@@ -158,11 +158,23 @@ export const updateGlobalMenuItem = async (req, res) => {
 export const updateBranchAssignment = async (req, res) => {
     try {
         const { id } = req.params;
-        const { price, quantity } = req.body;
-        if (price === undefined || quantity === undefined) {
-            return res.status(400).json({ msg: "Price and quantity are required." });
+        const { price, quantity, isAvailable } = req.body;
+        
+        const updateFields = {};
+        if (price !== undefined) updateFields.price = price;
+        if (quantity !== undefined) updateFields.quantity = quantity;
+        if (isAvailable !== undefined) updateFields.isAvailable = isAvailable;
+
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({ msg: "No update fields provided." });
         }
-        const updatedAssignment = await BranchMenuItem.findByIdAndUpdate(id, { price, quantity }, { new: true }).populate('branchId', 'name');
+
+        const updatedAssignment = await BranchMenuItem.findByIdAndUpdate(
+            id, 
+            updateFields, 
+            { new: true }
+        ).populate('branchId', 'name').populate('menuItemId');
+
         if (!updatedAssignment) {
             return res.status(404).json({ msg: "Assignment not found." });
         }
