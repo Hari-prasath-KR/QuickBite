@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import CustomerNavbar from '../components/CustomerNavbar'
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import toast from 'react-hot-toast';
 
 // --- Sub-components for a cleaner structure ---
 
@@ -96,7 +97,7 @@ const CustomerDashboard = () => {
         </section>
 
         {/* === HOW IT WORKS SECTION === */}
-        <section className="py-12 w-full max-w-5xl px-4">
+        <section className="py-12 w-full max-w-6xl px-4">
           <div className="bg-white/35 backdrop-blur-xl rounded-3xl border border-white/30 shadow-xl p-8 md:p-12 transition-all duration-500">
             
             {/* Unified Header */}
@@ -163,11 +164,24 @@ const CustomerDashboard = () => {
         </section>
 
         {/* === FEATURED CATERINGS SECTION === */}
-        <section id="caterings" className="py-20 px-6 w-full max-w-6xl">
-          <div className="container mx-auto text-center">
-            <h2 className="text-3xl font-extrabold text-slate-900 mb-12">
-              Caterings On Campus
-            </h2>
+        <section id="caterings" className="py-12 w-full max-w-6xl px-4">
+          <div className="bg-white/35 backdrop-blur-xl rounded-3xl border border-white/30 shadow-xl p-8 md:p-12 transition-all duration-500">
+            
+            {/* Unified Header */}
+            <div className="text-center max-w-2xl mx-auto mb-10">
+              <span className="text-xs font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-800 px-3.5 py-1.5 rounded-full">
+                🍽️ Our Caterers
+              </span>
+              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mt-4 tracking-tight leading-none">
+                Caterings On Campus
+              </h2>
+              <p className="text-slate-700 mt-3 text-base md:text-lg font-semibold">
+                Explore delicious menus from top campus caterers.
+              </p>
+              <div className="w-20 h-1.5 bg-gradient-to-r from-emerald-500 to-green-400 mx-auto mt-5 rounded-full shadow-sm"></div>
+            </div>
+
+            {/* Caterings Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
               {loading
                 ? // Show skeleton loaders while fetching data
@@ -267,22 +281,71 @@ const CustomerDashboard = () => {
             </h3>
 
             {branches.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">No active branches available at the moment.</p>
+              <p className="text-center text-gray-500 py-4">No branches available at the moment.</p>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {branches.map(branch => (
-                  <div
-                    key={branch._id}
-                    onClick={() => handleBranchSelect(branch._id)}
-                    className="p-4 border border-gray-200 rounded-xl hover:bg-yellow-50 hover:border-yellow-300 cursor-pointer transition-all flex justify-between items-center group"
-                  >
-                    <div>
-                      <h4 className="font-semibold text-gray-800 group-hover:text-yellow-700">{branch.name}</h4>
-                      <p className="text-sm text-gray-500">{branch.location}</p>
+                {branches.map(branch => {
+                  const isActive = branch.status === 'Active';
+                  return (
+                    <div
+                      key={branch._id}
+                      onClick={() => {
+                        if (isActive) {
+                          handleBranchSelect(branch._id);
+                        } else {
+                          toast.error(`${branch.name} is currently inactive and not accepting orders.`);
+                        }
+                      }}
+                      className={`p-4 border rounded-xl transition-all flex justify-between items-center group ${
+                        isActive
+                          ? 'border-emerald-100 hover:bg-emerald-50/50 hover:border-emerald-300 cursor-pointer shadow-sm hover:shadow'
+                          : 'border-slate-200 bg-slate-50/50 opacity-70 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Indicator Dot/Icon */}
+                        <div className="relative flex h-3 w-3">
+                          {isActive ? (
+                            <>
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </>
+                          ) : (
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-400"></span>
+                          )}
+                        </div>
+                        
+                        <div className="text-left">
+                          <div className="flex items-center gap-2">
+                            <h4 className={`font-bold ${isActive ? 'text-slate-800 group-hover:text-emerald-800' : 'text-slate-500'}`}>
+                              {branch.name}
+                            </h4>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                              isActive 
+                                ? 'bg-emerald-100 text-emerald-800' 
+                                : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              {isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                          <p className={`text-xs ${isActive ? 'text-slate-500' : 'text-slate-400'}`}>
+                            📍 {branch.location || "On Campus"}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {isActive ? (
+                        <span className="text-emerald-600 transition-transform group-hover:translate-x-1 duration-200 text-xl font-bold">
+                          ➔
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-lg">
+                          🔒
+                        </span>
+                      )}
                     </div>
-                    <span className="text-2xl">➔</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

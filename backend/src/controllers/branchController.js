@@ -29,7 +29,7 @@ export const getBranchesByCatering = async (req, res) => {
 export const getBranchesByCateringPublic = async (req, res) => {
   try {
     const { cateringId } = req.params;
-    const branches = await Branch.find({ cateringId, status: 'Active' });
+    const branches = await Branch.find({ cateringId });
     return res.json(branches);
   } catch (err) {
     return res.status(500).json({ msg: "Server error", error: err.message });
