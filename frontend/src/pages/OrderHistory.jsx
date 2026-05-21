@@ -110,6 +110,19 @@ const OrderHistory = () => {
                     <span className={`px-3 py-1 border text-xs font-bold rounded-full uppercase ${getStatusBadgeClass(order.status)}`}>
                       {order.status}
                     </span>
+                    <span className={`px-3 py-1 border text-xs font-bold rounded-full uppercase ${
+                      order.payment?.paid
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : order.payment?.method === "PayLater"
+                        ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                        : "bg-red-50 text-red-700 border-red-200"
+                    }`}>
+                      {order.payment?.paid
+                        ? "Paid Online"
+                        : order.payment?.method === "PayLater"
+                        ? "⏱ Pay Later at Counter"
+                        : "Unpaid"}
+                    </span>
                     <span className="text-slate-400 text-xs font-semibold font-mono">
                       {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
@@ -143,7 +156,9 @@ const OrderHistory = () => {
                 {/* Pricing & Actions */}
                 <div className="flex flex-col justify-between items-start md:items-end border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6 min-w-[160px]">
                   <div className="md:text-right space-y-1">
-                    <p className="text-slate-400 text-xs font-semibold">Grand Total paid</p>
+                    <p className="text-slate-400 text-xs font-semibold">
+                      {order.payment?.paid ? "Grand Total paid" : "Grand Total (Pay at Counter)"}
+                    </p>
                     <p className="text-2xl font-black text-green-600">₹{(order.total * 1.05).toFixed(2)}</p>
                     <p className="text-slate-400 text-xxs italic">Includes 5% GST (₹{(order.total * 0.05).toFixed(2)})</p>
                   </div>
@@ -172,7 +187,9 @@ const OrderHistory = () => {
                 ✓
               </div>
               <h2 className="text-2xl font-black text-slate-800">Order Invoice</h2>
-              <p className="text-slate-500 text-sm mt-1">Proof of secure online transaction payment.</p>
+              <p className="text-slate-500 text-sm mt-1">
+                {selectedOrder.payment?.paid ? "Proof of secure online transaction payment." : "Order placed via Pay Later option (Pending counter checkout)."}
+              </p>
             </div>
 
             {/* Receipt Content Wrapper for Print/Format */}
@@ -191,8 +208,18 @@ const OrderHistory = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-extrabold rounded-full uppercase tracking-wider">
-                    PAID ONLINE
+                  <span className={`px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-wider ${
+                    selectedOrder.payment?.paid
+                      ? "bg-emerald-100 text-emerald-800"
+                      : selectedOrder.payment?.method === "PayLater"
+                      ? "bg-amber-100 text-amber-800 animate-pulse"
+                      : "bg-red-100 text-red-800"
+                  }`}>
+                    {selectedOrder.payment?.paid
+                      ? "PAID ONLINE"
+                      : selectedOrder.payment?.method === "PayLater"
+                      ? "⏱ PAY LATER AT COUNTER"
+                      : "UNPAID"}
                   </span>
                   <p className="text-slate-400 text-xs font-mono mt-2">
                     {new Date(selectedOrder.createdAt).toLocaleDateString()} {new Date(selectedOrder.createdAt).toLocaleTimeString()}
@@ -209,7 +236,7 @@ const OrderHistory = () => {
                 <div>
                   <p className="text-slate-400 text-xs">Payment Reference:</p>
                   <p className="font-mono text-slate-800 font-bold mt-0.5 text-ellipsis overflow-hidden">
-                    {selectedOrder.payment?.razorpayPaymentId || "N/A"}
+                    {selectedOrder.payment?.razorpayPaymentId || (selectedOrder.payment?.method === "PayLater" ? "PayLater (Cash/Counter)" : "N/A")}
                   </p>
                 </div>
               </div>

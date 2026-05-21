@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import CustomerNavbar from "../components/CustomerNavbar";
+import toast from "react-hot-toast";
 
 // Floating Cart Icon/Summary Component for Mobile
 const CartSummary = ({ cart, totalPrice }) => {
@@ -54,6 +55,7 @@ const OrderPage = () => {
   const [receiptData, setReceiptData] = useState(null); // Backend-returned order details
   const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
   const [mockPaymentData, setMockPaymentData] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("Online");
 
   // Load menu items on mount
   useEffect(() => {
@@ -179,6 +181,42 @@ const OrderPage = () => {
       // 2. Initialize Order through backend (creates a Razorpay Order ID for Grand Total including 5% GST)
       const firstValidItem = menuItems.find(m => m.menuItemId?.cateringId);
       const cateringId = firstValidItem ? firstValidItem.menuItemId.cateringId : null;
+
+      // Handle PayLater checkout bypass
+      if (paymentMethod === "PayLater") {
+        try {
+          const directRes = await axios.post("http://localhost:5001/api/order/", {
+            userId,
+            cateringId: cateringId || "68bfee102f3982de6e57bcd2",
+            branchId,
+            items,
+            total: totalPrice,
+            payment: {
+              method: "PayLater",
+              razorpayOrderId: null,
+              razorpayPaymentId: null,
+              paid: false
+            }
+          });
+
+          // Show Receipt Modal
+          setReceiptData(directRes.data);
+          setShowReceipt(true);
+          
+          // Clear Cart
+          setCart({});
+          setTotalPrice(0);
+          setIsCartVisible(false);
+          toast.success("Order placed successfully with PayLater!");
+        } catch (err) {
+          console.error("Failed to place PayLater order:", err);
+          alert("Failed to place order. Please try again.");
+        } finally {
+          setCheckoutLoading(false);
+        }
+        return;
+      }
+
       const grandTotalPaise = Math.round(totalPrice * 1.05 * 100);
       
       let razorpayOrder;
@@ -501,6 +539,8 @@ const OrderPage = () => {
                     handlePlaceOrder={handlePlaceOrder}
                     checkoutLoading={checkoutLoading}
                     branchDetail={branchDetail}
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
                   />
                 </div>
               </div>
@@ -520,6 +560,8 @@ const OrderPage = () => {
         handlePlaceOrder={handlePlaceOrder}
         checkoutLoading={checkoutLoading}
         branchDetail={branchDetail}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
       />
 
       {/* 💳 HIGH-FIDELITY QUICKBITE PAYMENT SANDBOX FALLBACK MODAL */}
@@ -642,8 +684,12 @@ const OrderPage = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-extrabold rounded-full uppercase tracking-wider">
-                    PAID ONLINE
+                  <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${
+                    receiptData.payment?.method === "PayLater"
+                      ? "bg-amber-500/10 border border-amber-500/25 text-amber-700 animate-pulse"
+                      : "bg-emerald-500/10 border border-emerald-500/25 text-emerald-700"
+                  }`}>
+                    {receiptData.payment?.method === "PayLater" ? "⏱ Pay Later at Pickup" : "💳 Paid Online"}
                   </span>
                   <p className="text-slate-400 text-xs font-mono mt-2">
                     {new Date(receiptData.createdAt).toLocaleDateString()} {new Date(receiptData.createdAt).toLocaleTimeString()}
@@ -658,9 +704,9 @@ const OrderPage = () => {
                   <p className="font-mono text-slate-800 font-bold mt-0.5">{receiptData._id}</p>
                 </div>
                 <div>
-                  <p className="text-slate-400 text-xs">Payment Reference:</p>
-                  <p className="font-mono text-slate-800 font-bold mt-0.5 text-ellipsis overflow-hidden">
-                    {receiptData.payment?.razorpayPaymentId || "N/A"}
+                  <p className="text-slate-400 text-xs">Payment Option:</p>
+                  <p className="font-bold text-slate-800 mt-0.5 text-ellipsis overflow-hidden">
+                    {receiptData.payment?.method === "PayLater" ? "PayLater (Cash/Counter)" : (receiptData.payment?.razorpayPaymentId || "Online Payment")}
                   </p>
                 </div>
               </div>
@@ -731,7 +777,16 @@ const OrderPage = () => {
 };
 
 // Helper component for Cart content
-const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLoading, branchDetail }) => (
+const CartContent = ({ 
+  cart, 
+  menuItems, 
+  totalPrice, 
+  handlePlaceOrder, 
+  checkoutLoading, 
+  branchDetail,
+  paymentMethod,
+  setPaymentMethod
+}) => (
   <>
     {Object.keys(cart).length === 0 ? (
       <div className="text-center py-10 flex flex-col items-center">
@@ -779,11 +834,78 @@ const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLo
           </div>
         </div>
 
+        {/* 🛡️ Premium Selector for Payment Method */}
+        <div className="my-5 border-t border-slate-100 pt-4">
+          <h3 className="text-xs font-black text-slate-500 mb-3 uppercase tracking-wider flex items-center gap-1.5">
+            <span>🛡️</span> Select Payment Option
+          </h3>
+          <div className="space-y-2.5">
+            {/* Online Payment Card */}
+            <div
+              onClick={() => setPaymentMethod && setPaymentMethod("Online")}
+              className={`flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                paymentMethod === "Online"
+                  ? "border-emerald-500 bg-emerald-50/50 shadow-sm"
+                  : "border-slate-100 hover:border-slate-200 bg-slate-50/40"
+              }`}
+            >
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors duration-300 ${
+                paymentMethod === "Online" ? "border-emerald-500 bg-emerald-500" : "border-slate-350"
+              }`}>
+                {paymentMethod === "Online" && (
+                  <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                )}
+              </div>
+              <div className="flex-grow">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">💳</span>
+                  <span className="font-extrabold text-xs text-slate-850">Online Payment</span>
+                  <span className="bg-emerald-100 text-emerald-700 font-bold text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-widest scale-90 origin-left">
+                    Instant
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Secure checkout via Cards, UPI, NetBanking.
+                </p>
+              </div>
+            </div>
+
+            {/* PayLater Card */}
+            <div
+              onClick={() => setPaymentMethod && setPaymentMethod("PayLater")}
+              className={`flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                paymentMethod === "PayLater"
+                  ? "border-amber-500 bg-amber-50/30 shadow-sm"
+                  : "border-slate-100 hover:border-slate-200 bg-slate-50/40"
+              }`}
+            >
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors duration-300 ${
+                paymentMethod === "PayLater" ? "border-amber-500 bg-amber-500" : "border-slate-350"
+              }`}>
+                {paymentMethod === "PayLater" && (
+                  <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                )}
+              </div>
+              <div className="flex-grow">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">⏱️</span>
+                  <span className="font-extrabold text-xs text-slate-850">Pay Later at Pickup</span>
+                  <span className="bg-amber-100 text-amber-800 font-bold text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-widest scale-90 origin-left animate-pulse">
+                    Skip Queue
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Pay with Cash, UPI, or Card at the food counter.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <button
           onClick={handlePlaceOrder}
           disabled={checkoutLoading || branchDetail?.status === "Inactive"}
-          className="w-full mt-5 bg-green-500 text-white font-extrabold py-3.5 rounded-xl hover:bg-green-600 active:scale-98 hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center text-base cursor-pointer"
+          className="w-full mt-2 bg-green-500 text-white font-extrabold py-3.5 rounded-xl hover:bg-green-600 active:scale-98 hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center text-base cursor-pointer"
         >
           {branchDetail?.status === "Inactive" ? (
             <>
@@ -792,11 +914,11 @@ const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLo
           ) : checkoutLoading ? (
             <>
               <span className="animate-spin inline-block h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></span>
-              Processing Payment...
+              Processing Order...
             </>
           ) : (
             <>
-              Pay & Place Order
+              {paymentMethod === "PayLater" ? "⏱️ Place PayLater Order" : "💳 Pay & Place Order"}
             </>
           )}
         </button>
