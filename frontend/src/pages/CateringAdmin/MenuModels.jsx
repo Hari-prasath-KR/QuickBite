@@ -1,11 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { X, Upload, Info } from 'lucide-react';
 
-const MenuModels = ({ isOpen, onClose, onSubmit }) => {
+const MenuModels = ({ isOpen, onClose, onSubmit, editingItem }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [defaultPrice, setDefaultPrice] = useState('');
     const [imageFile, setImageFile] = useState(null);
     const [category, setCategory] = useState('Uncategorized'); 
+
+    useEffect(() => {
+        if (editingItem) {
+            setName(editingItem.name || '');
+            setDescription(editingItem.description || '');
+            setDefaultPrice(editingItem.defaultPrice || '');
+            setCategory(editingItem.category || 'Uncategorized');
+        } else {
+            setName('');
+            setDescription('');
+            setDefaultPrice('');
+            setCategory('Uncategorized');
+        }
+        setImageFile(null);
+    }, [editingItem, isOpen]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -17,13 +33,11 @@ const MenuModels = ({ isOpen, onClose, onSubmit }) => {
         if (imageFile) {
             formData.append('image', imageFile);
         }
-        setName('');
-        setDescription('');
-        setDefaultPrice('');
-        setImageFile(null);
-        setCategory('Uncategorized');
+        
+        // Let parent handle submits
         onSubmit(formData);
     };
+
     const handleClose = () => {
         setName('');
         setDescription('');
@@ -32,62 +46,102 @@ const MenuModels = ({ isOpen, onClose, onSubmit }) => {
         setCategory('Uncategorized');
         onClose();
     };
+
     if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-[2px] z-[100] flex items-center justify-center p-4">
+            <div className="bg-white/90 backdrop-blur-xl border border-white/40 p-8 rounded-3xl shadow-2xl w-full max-w-md transition-all duration-300">
                 <div className="flex items-start justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-green-800">Add Item to Global Menu</h2>
-                    <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                        {editingItem ? '✏️ Edit Menu Item' : '🍽️ Add Global Item'}
+                    </h2>
+                    <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-full transition">
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                
+                <form onSubmit={handleSubmit} className="space-y-4 text-left">
                     <div>
-                        <label className="block mb-2 font-semibold text-gray-700">Item Name</label>
-                        <input type="text" className="w-full border p-3 rounded-lg  focus:outline-none focus:ring-2 focus:ring-yellow-400  focus:border-yellow-400" value={name} onChange={(e) => setName(e.target.value)} required />
+                        <label className="block mb-1.5 text-xs font-black uppercase tracking-wider text-slate-500">Item Name</label>
+                        <input 
+                            type="text" 
+                            className="w-full bg-white/70 border border-slate-200 p-3 rounded-xl focus:outline-none focus:border-green-500 font-bold text-xs text-slate-800 shadow-sm transition" 
+                            value={name} 
+                            onChange={(e) => setName(e.target.value)} 
+                            required 
+                            placeholder="e.g. Premium Paneer Roll"
+                        />
                     </div>
+
                     <div>
-                        <label className="block mb-2 font-semibold text-gray-700">Category</label>
+                        <label className="block mb-1.5 text-xs font-black uppercase tracking-wider text-slate-500">Category</label>
                         <select
-                            className="w-full border p-3 rounded-lg bg-white  text-gray-700" 
+                            className="w-full bg-white/70 border border-slate-200 p-3 rounded-xl focus:outline-none focus:border-green-500 font-bold text-xs text-slate-800 shadow-sm cursor-pointer transition" 
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
                         >
-                            <option>Uncategorized</option>
-                            <option>Appetizer</option>
-                            <option>Main Course</option>
-                            <option>Dessert</option>
-                            <option>Beverage</option>
+                            <option value="Uncategorized">Uncategorized</option>
+                            <option value="Appetizer">Appetizer</option>
+                            <option value="Main Course">Main Course</option>
+                            <option value="Dessert">Dessert</option>
+                            <option value="Beverage">Beverage</option>
                         </select>
                     </div>
+
                     <div>
-                        <label className="block mb-2 font-semibold text-gray-700">Description</label>
-                        <textarea className="w-full border p-3 rounded-lg h-24 focus:outline-none focus:ring-2 focus:ring-yellow-400  focus:border-yellow-400" value={description} onChange={(e) => setDescription(e.target.value)} />
+                        <label className="block mb-1.5 text-xs font-black uppercase tracking-wider text-slate-500">Description</label>
+                        <textarea 
+                            className="w-full bg-white/70 border border-slate-200 p-3 rounded-xl h-24 focus:outline-none focus:border-green-500 font-semibold text-xs text-slate-800 shadow-sm transition" 
+                            value={description} 
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Describe ingredients, spice levels, and portions..."
+                        />
                     </div>
+
                     <div>
-                        <label className="block mb-2 font-semibold text-gray-700">Default Price</label>
-                        <input type="number" step="0.01" className="w-full border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400  focus:border-yellow-400" value={defaultPrice} onChange={(e) => setDefaultPrice(e.target.value)} required />
+                        <label className="block mb-1.5 text-xs font-black uppercase tracking-wider text-slate-500">Default Global Price (₹)</label>
+                        <input 
+                            type="number" 
+                            step="0.01" 
+                            className="w-full bg-white/70 border border-slate-200 p-3 rounded-xl focus:outline-none focus:border-green-500 font-bold text-xs text-slate-800 shadow-sm transition" 
+                            value={defaultPrice} 
+                            onChange={(e) => setDefaultPrice(e.target.value)} 
+                            required 
+                            placeholder="e.g. 120.00"
+                        />
                     </div>
+
                     <div>
-                        <label className="block mb-2 font-semibold text-gray-700">Item Image</label>
+                        <label className="block mb-1.5 text-xs font-black uppercase tracking-wider text-slate-500">Item Image</label>
                         <div className="mt-2 flex items-center gap-4">
-                            <label htmlFor="file-upload" className="cursor-pointer rounded-md bg-white px-4 py-2 text-sm font-semibold text-green-600 ring-1 ring-inset ring-green-300 hover:bg-green-50">
-                                <span>Upload a file</span>
+                            <label htmlFor="file-upload" className="cursor-pointer rounded-xl bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-extrabold text-emerald-600 border border-emerald-200 flex items-center gap-1.5 shadow-sm active:scale-95 transition-all">
+                                <Upload className="w-4 h-4" />
+                                <span>Upload Image</span>
                                 <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={(e) => setImageFile(e.target.files[0])} accept="image/*" />
                             </label>
-                            {imageFile && <span className="text-sm text-gray-500 truncate">{imageFile.name}</span>}
+                            {imageFile ? (
+                                <span className="text-xs text-slate-500 font-semibold truncate max-w-[180px]">{imageFile.name}</span>
+                            ) : editingItem?.imageUrl ? (
+                                <span className="text-xs text-slate-400 font-semibold truncate max-w-[180px]">Existing image kept</span>
+                            ) : (
+                                <span className="text-[10px] text-slate-400 font-semibold">No image selected</span>
+                            )}
                         </div>
                     </div>
-                    <div className="flex gap-4 pt-4">
-                        <button type="button" onClick={handleClose} className="w-full py-3 bg-gray-200 text-gray-800 font-bold rounded-lg hover:bg-gray-300">Cancel</button>
-                        <button type="submit" className="w-full py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700">Add Item</button>
+
+                    <div className="flex gap-3 pt-4 border-t border-slate-100 mt-6">
+                        <button type="button" onClick={handleClose} className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-sm transition active:scale-95">
+                            Cancel
+                        </button>
+                        <button type="submit" className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-sm transition active:scale-95">
+                            {editingItem ? 'Save Changes' : 'Create Item'}
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     );
 };
+
 export default MenuModels;
