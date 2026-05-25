@@ -143,7 +143,7 @@ const OrderPage = () => {
   // Checkout and Order Placement
   const handlePlaceOrder = async () => {
     if (branchDetail?.status === "Inactive") {
-      alert("This branch is currently under maintenance or offline and is not accepting online orders.");
+      toast.error("This branch is currently under maintenance or offline and is not accepting online orders.");
       return;
     }
 
@@ -158,7 +158,7 @@ const OrderPage = () => {
     });
 
     if (items.length === 0) {
-      alert("Your cart is empty!");
+      toast.error("Your cart is empty!");
       return;
     }
 
@@ -173,7 +173,7 @@ const OrderPage = () => {
           userId = userRes.data.data._id;
           setUserProfile(userRes.data.data);
         } catch (e) {
-          alert("Please login to place an order.");
+          toast.error("Please login to place an order.");
           navigate("/login");
           return;
         }
@@ -224,7 +224,7 @@ const OrderPage = () => {
           } : null);
         } catch (err) {
           console.error("Failed to place Wallet order:", err);
-          alert(err.response?.data?.message || "Failed to place order using Wallet. Please try again.");
+          toast.error(err.response?.data?.message || "Failed to place order using Wallet. Please try again.");
         } finally {
           setCheckoutLoading(false);
         }
@@ -259,7 +259,7 @@ const OrderPage = () => {
           toast.success("Order placed successfully with PayLater!");
         } catch (err) {
           console.error("Failed to place PayLater order:", err);
-          alert(err.response?.data?.message || "Failed to place order. Please try again.");
+          toast.error(err.response?.data?.message || "Failed to place order. Please try again.");
         } finally {
           setCheckoutLoading(false);
         }
@@ -346,7 +346,7 @@ const OrderPage = () => {
                 console.error("Direct order fallback failed:", directErr);
               }
             }
-            alert(directErr.response?.data?.message || "Payment verification failed. Please try again.");
+            toast.error(directErr.response?.data?.message || "Payment verification failed. Please try again.");
           }
         },
         prefill: {
@@ -429,7 +429,7 @@ const OrderPage = () => {
             setIsCartVisible(false);
           } catch (verifyErr) {
             console.error("Direct fallback placement failed:", verifyErr);
-            alert(verifyErr.response?.data?.message || "Payment failed to verify. Please try again.");
+            toast.error(verifyErr.response?.data?.message || "Payment failed to verify. Please try again.");
           }
         }
       };
@@ -682,7 +682,7 @@ const OrderPage = () => {
                     });
                   } catch (err) {
                     console.error("Mock handler execution failed:", err);
-                    alert("Mock payment handler failed.");
+                    toast.error("Mock payment handler failed.");
                   } finally {
                     setCheckoutLoading(false);
                   }
@@ -697,7 +697,7 @@ const OrderPage = () => {
                 onClick={() => {
                   setShowMockPaymentModal(false);
                   setCheckoutLoading(false);
-                  alert("Payment cancelled by customer.");
+                  toast.error("Payment cancelled by customer.");
                 }}
                 className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition duration-200 text-sm cursor-pointer"
               >
