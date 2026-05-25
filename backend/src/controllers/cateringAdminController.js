@@ -43,18 +43,18 @@ const calculateAnalytics = async (cateringId, branchId) => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 7);
 
-  const branches = await Catering.findById(cateringId).populate("branches");
+  const branches = await Branch.find({ cateringId });
   
   // Calculate branchesPie over all catering orders for consistency
   const allOrders = await Order.find({ cateringId });
-  const branchesPie = branches.branches.map(branch => ({
+  const branchesPie = branches.map(branch => ({
     name: branch.name,
     revenue: allOrders
       .filter(o => o.branchId && o.branchId.toString() === branch._id.toString())
       .reduce((sum, o) => sum + o.total, 0),
   }));
 
-  return { revenue, topDishes, branches: branches.branches, branchesPie };
+  return { revenue, topDishes, branches, branchesPie };
 };
 
 export const getCateringAnalytics = async (req, res) => {
