@@ -5,8 +5,12 @@ import mongoose from "mongoose";
 import Branch from "../models/branch.js";
 import bcrypt from "bcryptjs";
 
-const calculateAnalytics = async (cateringId) => {
-  const orders = await Order.find({ cateringId: cateringId });
+const calculateAnalytics = async (cateringId, branchId) => {
+  const query = { cateringId };
+  if (branchId && branchId !== "all") {
+    query.branchId = new mongoose.Types.ObjectId(branchId);
+  }
+  const orders = await Order.find(query);
 
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -39,11 +43,14 @@ const calculateAnalytics = async (cateringId) => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 7);
 
- const branches = await Catering.findById(cateringId).populate("branches");
+  const branches = await Catering.findById(cateringId).populate("branches");
+  
+  // Calculate branchesPie over all catering orders for consistency
+  const allOrders = await Order.find({ cateringId });
   const branchesPie = branches.branches.map(branch => ({
     name: branch.name,
-    revenue: orders
-      .filter(o => o.branch.toString() === branch._id.toString())
+    revenue: allOrders
+      .filter(o => o.branchId && o.branchId.toString() === branch._id.toString())
       .reduce((sum, o) => sum + o.total, 0),
   }));
 
@@ -61,7 +68,8 @@ export const getCateringAnalytics = async (req, res) => {
       console.error("4. A catering company was NOT found for the ID:", adminUser.cateringId);
       return res.status(404).json({ error: "Catering company does not exist for the linked ID." });
     }
-    const analytics = await calculateAnalytics(catering._id);
+    const { branchId } = req.query;
+    const analytics = await calculateAnalytics(catering._id, branchId);
     res.json({ catering, analytics });
 
   } catch (err) {

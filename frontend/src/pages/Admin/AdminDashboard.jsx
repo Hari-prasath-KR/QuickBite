@@ -46,16 +46,16 @@ const TotalIncomeSection = ({ stats }) => (
     <h4 className="text-xl font-extrabold text-gray-800 mb-4">📅 Total Revenue</h4>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       <IncomeStatCard
-        title="This Week's Income"
-        amount={stats?.weekly?.amount || 0}
-        percentageChange={stats?.weekly?.percentageChange || 0}
-        comparisonText="vs. last week"
-      />
-      <IncomeStatCard
         title="Today's Income"
         amount={stats?.today?.amount || 0}
         percentageChange={stats?.today?.percentageChange || 0}
         comparisonText="vs. yesterday"
+      />
+      <IncomeStatCard
+        title="This Week's Income"
+        amount={stats?.weekly?.amount || 0}
+        percentageChange={stats?.weekly?.percentageChange || 0}
+        comparisonText="vs. last week"
       />
       <IncomeStatCard
         title="This Month's Income"
@@ -157,6 +157,26 @@ const AdminDashboard = () => {
   // --- New state for CateringManagement ---
   const [catering, setCaterings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCatering, setSelectedCatering] = useState("all");
+  const [loadingDishes, setLoadingDishes] = useState(false);
+
+  const fetchTopDishes = async (cateringId) => {
+    setLoadingDishes(true);
+    try {
+      const r = await api.get(`/admin/analytics/top-dishes?limit=5&period=30&cateringId=${cateringId}`);
+      setTopDishes(r.data);
+    } catch (err) {
+      console.error("Error fetching top dishes:", err);
+    } finally {
+      setLoadingDishes(false);
+    }
+  };
+
+  const handleCateringChange = (e) => {
+    const cateringId = e.target.value;
+    setSelectedCatering(cateringId);
+    fetchTopDishes(cateringId);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -315,28 +335,55 @@ const AdminDashboard = () => {
             )}
 
             {/* Top Dishes */}
-            {topDishes.length > 0 ? (
-              <div className="bg-white/90 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition">
-                <h3 className="text-xl font-extrabold text-gray-800">🍽 Top Dishes</h3>
-                <ul className="mt-5 space-y-3">
+            <div className="bg-white/90 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition relative min-h-[220px]">
+              {loadingDishes && (
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex justify-center items-center z-10 rounded-2xl">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+                </div>
+              )}
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
+                <h3 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
+                  🍽 Top Dishes
+                </h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Caterer:</span>
+                  <select
+                    value={selectedCatering}
+                    onChange={handleCateringChange}
+                    className="bg-slate-50 border border-slate-205 rounded-xl py-1 px-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-green-500 shadow-sm"
+                  >
+                    <option value="all">All Caterers</option>
+                    {catering && catering.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {topDishes.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 font-bold text-sm">
+                  No orders or dishes logged for this selection.
+                </div>
+              ) : (
+                <ul className="space-y-3">
                   {topDishes.map((d, i) => (
                     <li
                       key={d.dish}
-                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition shadow-sm border border-slate-100/50"
                     >
-                      <span className="font-medium text-gray-700">
+                      <span className="font-extrabold text-sm text-slate-700">
                         {i + 1}. {d.dish}
                       </span>
-                      <span className="font-semibold text-indigo-600">
+                      <span className="font-black text-sm text-emerald-600">
                         {d.count} orders
                       </span>
                     </li>
                   ))}
                 </ul>
-              </div>
-            ) : (
-              <TopDishesSkeleton />
-            )}
+              )}
+            </div>
           </div>
 
           {/* Top-Right Section */}

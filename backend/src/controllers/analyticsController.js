@@ -58,10 +58,16 @@ export const topDishes = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 5;
     const days = parseInt(req.query.period) || 30;
+    const { cateringId } = req.query;
     const start = new Date(); start.setDate(start.getDate() - days);
 
+    const match = { createdAt: { $gte: start }, "payment.paid": true };
+    if (cateringId && cateringId !== "all") {
+      match.cateringId = new mongoose.Types.ObjectId(cateringId);
+    }
+
     const agg = await Order.aggregate([
-      { $match: { createdAt: { $gte: start }, "payment.paid": true } },
+      { $match: match },
       { $unwind: "$items" },
       { $group: { _id: "$items.name", count: { $sum: "$items.quantity" }, revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } } } },
       { $sort: { count: -1 } },
