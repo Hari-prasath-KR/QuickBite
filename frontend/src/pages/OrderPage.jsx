@@ -527,6 +527,13 @@ const OrderPage = () => {
                             {item.menuItemId.category}
                           </span>
                         )}
+                        {item.quantity === 0 && (
+                          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-2 text-center">
+                            <span className="bg-rose-600/90 text-white font-black text-xs px-3.5 py-1.5 rounded-full uppercase tracking-widest border border-rose-400/30 shadow-lg animate-pulse">
+                              Out of Stock
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <h3 className="text-xl font-bold text-slate-800">{item.menuItemId?.name}</h3>
@@ -538,7 +545,14 @@ const OrderPage = () => {
                     <div className="mt-6 flex items-center justify-between">
                       <span className="text-2xl font-black text-green-600">₹{item.price.toFixed(2)}</span>
 
-                      {cart[item.menuItemId._id] ? (
+                      {item.quantity === 0 ? (
+                        <button
+                          disabled
+                          className="px-5 py-2 bg-slate-100 border border-slate-200 text-slate-400 font-extrabold rounded-xl cursor-not-allowed text-xs uppercase tracking-wider"
+                        >
+                          Sold Out
+                        </button>
+                      ) : cart[item.menuItemId._id] ? (
                         <div className="flex items-center bg-green-100 rounded-xl px-2 py-1.5 border border-green-200">
                           <button
                             onClick={() => handleRemoveFromCart(item)}
@@ -551,7 +565,8 @@ const OrderPage = () => {
                           </span>
                           <button
                             onClick={() => handleAddToCart(item)}
-                            className="px-2 text-lg font-bold text-green-700 hover:bg-green-200 rounded-lg transition"
+                            className="px-2 text-lg font-bold text-green-700 hover:bg-green-200 rounded-lg transition disabled:opacity-40"
+                            disabled={cart[item.menuItemId._id] >= item.quantity}
                           >
                             +
                           </button>

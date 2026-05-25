@@ -49,9 +49,6 @@ const validateAndDeductStock = async (branchId, items) => {
   // 2) Deduct stock and save
   for (const { branchItem, quantityOrdered } of assignments) {
     branchItem.quantity = Math.max(0, branchItem.quantity - quantityOrdered);
-    if (branchItem.quantity === 0) {
-      branchItem.isAvailable = false; // Mark stock out if quantity becomes 0
-    }
     await branchItem.save();
   }
 

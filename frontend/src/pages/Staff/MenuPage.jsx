@@ -42,7 +42,7 @@ function MenuPage() {
       setUser(u);
 
       if (u.branchId) {
-        const menuRes = await axios.get(`http://localhost:5001/api/menu/branch/${u.branchId}`, { withCredentials: true });
+        const menuRes = await axios.get(`http://localhost:5001/api/menu/branch/${u.branchId}?all=true`, { withCredentials: true });
         setMenuItems(menuRes.data);
       } else {
         toast.error("No branch associated with this staff account.");
