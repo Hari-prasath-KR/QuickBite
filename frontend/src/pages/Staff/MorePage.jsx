@@ -164,6 +164,18 @@ function MorePage() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await axios.post("http://localhost:5001/api/auth/logout", {}, { withCredentials: true });
+      toast.success("Successfully logged out!");
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    } catch (err) {
+      console.error("Logout failed:", err);
+      toast.error("Failed to logout. Please try again.");
+    }
+  };
+
   // Operational toggles & handlers
   const handleToggleBranch = async () => {
     if (!user || !user.branchId) {
@@ -337,6 +349,13 @@ function MorePage() {
               <span className={`h-2.5 w-2.5 rounded-full ${isBranchOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
               {isBranchOpen ? "Accepting Orders" : "Shift Closed"}
             </span>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-4 py-2 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-extrabold text-xs rounded-2xl shadow-md transition duration-200 cursor-pointer"
+            >
+              <MdPowerSettingsNew size={14} />
+              Logout
+            </button>
           </div>
         </div>
 
