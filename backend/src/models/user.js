@@ -37,6 +37,10 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Branch",
     default: null,
+  },
+  walletBalance: {
+    type: Number,
+    default: 500, // Starter campus credits
   }
 }, { timestamps: true });
 

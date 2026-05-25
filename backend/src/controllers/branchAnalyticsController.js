@@ -56,11 +56,14 @@ const recentOrdersRaw = await Order.find({
 
     const recentOrders = recentOrdersRaw.map(o => ({
       _id: o._id,
-      name: o.userId?.name || "Guest",
-      items: o.items, // already correct
+      name: o.customerName || o.userId?.name || "Guest",
+      items: o.items,
       status: o.status,
       total: o.total,
-      createdAt: o.createdAt
+      createdAt: o.createdAt,
+      payment: o.payment,
+      table: o.table,
+      customerName: o.customerName || o.userId?.name || "Guest"
     }));
 
     // -----------------------------------------

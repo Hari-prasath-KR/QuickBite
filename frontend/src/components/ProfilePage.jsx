@@ -177,8 +177,8 @@ const ProfilePage = () => {
     progressPercentage = (points / 100) * 100;
   }
 
-  // Calculate wallet dynamically: starter campus credits ₹500, plus ₹50 for every 10 orders
-  const walletAmount = 500 + Math.floor(orderCount / 10) * 50;
+  // Calculate wallet dynamically: starter campus credits ₹500, plus ₹50 for every 10 orders, falling back to database balance
+  const walletAmount = typeof user.walletBalance === 'number' ? user.walletBalance : (500 + Math.floor(orderCount / 10) * 50);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white font-sans">

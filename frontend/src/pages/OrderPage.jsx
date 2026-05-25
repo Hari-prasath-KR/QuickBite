@@ -56,6 +56,7 @@ const OrderPage = () => {
   const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
   const [mockPaymentData, setMockPaymentData] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Online");
+  const [onlineSubMethod, setOnlineSubMethod] = useState("Razorpay"); // "Razorpay" or "Wallet"
 
   // Load menu items on mount
   useEffect(() => {
@@ -181,6 +182,54 @@ const OrderPage = () => {
       // 2. Initialize Order through backend (creates a Razorpay Order ID for Grand Total including 5% GST)
       const firstValidItem = menuItems.find(m => m.menuItemId?.cateringId);
       const cateringId = firstValidItem ? firstValidItem.menuItemId.cateringId : null;
+
+      // Handle Wallet checkout bypass
+      if (paymentMethod === "Online" && onlineSubMethod === "Wallet") {
+        try {
+          const grandTotal = totalPrice * 1.05;
+          if ((userProfile?.walletBalance || 0) < grandTotal) {
+            toast.error("Insufficient wallet balance.");
+            setCheckoutLoading(false);
+            return;
+          }
+
+          const directRes = await axios.post("http://localhost:5001/api/order/", {
+            userId,
+            cateringId: cateringId || "68bfee102f3982de6e57bcd2",
+            branchId,
+            items,
+            total: totalPrice,
+            payment: {
+              method: "Wallet",
+              razorpayOrderId: null,
+              razorpayPaymentId: null,
+              paid: true
+            }
+          });
+
+          // Show Receipt Modal
+          setReceiptData(directRes.data);
+          setShowReceipt(true);
+          
+          // Clear Cart
+          setCart({});
+          setTotalPrice(0);
+          setIsCartVisible(false);
+          toast.success("Order paid and placed successfully using Wallet!");
+          
+          // Update local profile state to reflect subtracted wallet balance
+          setUserProfile(prev => prev ? {
+            ...prev,
+            walletBalance: Number((prev.walletBalance - grandTotal).toFixed(2))
+          } : null);
+        } catch (err) {
+          console.error("Failed to place Wallet order:", err);
+          alert(err.response?.data?.message || "Failed to place order using Wallet. Please try again.");
+        } finally {
+          setCheckoutLoading(false);
+        }
+        return;
+      }
 
       // Handle PayLater checkout bypass
       if (paymentMethod === "PayLater") {
@@ -541,6 +590,9 @@ const OrderPage = () => {
                     branchDetail={branchDetail}
                     paymentMethod={paymentMethod}
                     setPaymentMethod={setPaymentMethod}
+                    onlineSubMethod={onlineSubMethod}
+                    setOnlineSubMethod={setOnlineSubMethod}
+                    userProfile={userProfile}
                   />
                 </div>
               </div>
@@ -562,6 +614,9 @@ const OrderPage = () => {
         branchDetail={branchDetail}
         paymentMethod={paymentMethod}
         setPaymentMethod={setPaymentMethod}
+        onlineSubMethod={onlineSubMethod}
+        setOnlineSubMethod={setOnlineSubMethod}
+        userProfile={userProfile}
       />
 
       {/* 💳 HIGH-FIDELITY QUICKBITE PAYMENT SANDBOX FALLBACK MODAL */}
@@ -712,11 +767,16 @@ const OrderPage = () => {
               </div>
 
               {/* Food Verification Token in Bill */}
-              {receiptData.payment?.method === "PayLater" && !receiptData.payment?.paid ? (
-                <div className="bg-amber-50 border border-amber-200 border-dashed rounded-xl p-4 text-center my-4">
+              {!receiptData.payment?.paid ? (
+                <div className="bg-amber-50 border border-amber-300 border-dashed rounded-xl p-4 text-center my-4">
                   <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Food Verification Token</p>
-                  <p className="text-xl font-extrabold text-amber-800 mt-1 uppercase">PENDING PAYMENT AT COUNTER</p>
-                  <p className="text-xxs text-slate-500 mt-1 font-semibold">Payment must be completed before food delivery.</p>
+                  <p className="text-3xl font-black text-amber-800 mt-1 tracking-wider">
+                    {receiptData.tokenNumber || `TK-${receiptData._id.toString().slice(-4).toUpperCase()}`}
+                  </p>
+                  <p className="text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded mt-1.5 inline-block uppercase tracking-wider">
+                    ⚠️ Unpaid - Pay at counter pickup
+                  </p>
+                  <p className="text-xxs text-slate-500 mt-1.5 font-semibold">Please complete payment at the counter to claim your food.</p>
                 </div>
               ) : (
                 <div className="bg-emerald-50 border border-emerald-200 border-dashed rounded-xl p-4 text-center my-4 animate-pulse">
@@ -802,7 +862,10 @@ const CartContent = ({
   checkoutLoading, 
   branchDetail,
   paymentMethod,
-  setPaymentMethod
+  setPaymentMethod,
+  onlineSubMethod,
+  setOnlineSubMethod,
+  userProfile
 }) => (
   <>
     {Object.keys(cart).length === 0 ? (
@@ -884,6 +947,63 @@ const CartContent = ({
                 <p className="text-[10px] text-slate-400 mt-0.5">
                   Secure checkout via Cards, UPI, NetBanking.
                 </p>
+
+                {/* Sub-Payment Wallet / Gateway Option (Disabled/Hidden on PayLater) */}
+                {paymentMethod === "Online" && (
+                  <div className="mt-3.5 space-y-2 border-t border-slate-250/20 pt-2.5 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-[9px] font-bold text-slate-450 uppercase tracking-widest mb-1.5">Select Settlement Method:</p>
+                    
+                    {/* Razorpay Option */}
+                    <div
+                      onClick={() => setOnlineSubMethod && setOnlineSubMethod("Razorpay")}
+                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition border text-xxs ${
+                        onlineSubMethod === "Razorpay"
+                          ? "bg-emerald-100/40 border-emerald-300 font-extrabold text-emerald-800"
+                          : "bg-white border-slate-200 hover:border-slate-300 text-slate-600"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        checked={onlineSubMethod === "Razorpay"}
+                        onChange={() => {}}
+                        className="w-3 h-3 text-emerald-500 focus:ring-emerald-400"
+                      />
+                      <span>UPI / Cards / NetBanking (Razorpay)</span>
+                    </div>
+                    
+                    {/* Wallet Option */}
+                    <div
+                      onClick={() => {
+                        const grandTotal = totalPrice * 1.05;
+                        const hasSufficient = (userProfile?.walletBalance || 0) >= grandTotal;
+                        if (hasSufficient) {
+                          setOnlineSubMethod && setOnlineSubMethod("Wallet");
+                        } else {
+                          toast.error(`Insufficient wallet balance! You need ₹${grandTotal.toFixed(2)}.`);
+                        }
+                      }}
+                      className={`flex items-center justify-between gap-2 p-2 rounded-lg cursor-pointer transition border text-xxs ${
+                        onlineSubMethod === "Wallet"
+                          ? "bg-emerald-100/40 border-emerald-300 font-extrabold text-emerald-800"
+                          : "bg-white border-slate-200 hover:border-slate-300 text-slate-600"
+                      } ${(userProfile?.walletBalance || 0) < totalPrice * 1.05 ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={onlineSubMethod === "Wallet"}
+                          disabled={(userProfile?.walletBalance || 0) < totalPrice * 1.05}
+                          onChange={() => {}}
+                          className="w-3 h-3 text-emerald-500 focus:ring-emerald-400"
+                        />
+                        <span>Use QuickBite Campus Wallet</span>
+                      </div>
+                      <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
+                        ₹{(userProfile?.walletBalance || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -935,7 +1055,11 @@ const CartContent = ({
             </>
           ) : (
             <>
-              {paymentMethod === "PayLater" ? "⏱️ Place PayLater Order" : "💳 Pay & Place Order"}
+              {paymentMethod === "PayLater"
+                ? "⏱️ Place PayLater Order"
+                : onlineSubMethod === "Wallet"
+                ? "💼 Pay with Wallet & Place Order"
+                : "💳 Pay & Place Order"}
             </>
           )}
         </button>

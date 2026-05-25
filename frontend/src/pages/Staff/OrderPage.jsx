@@ -372,7 +372,7 @@ const TokenVerificationModal = ({ tokenNumber, onClose, onConfirm }) => {
     if (entered === expected || entered === expected.replace("TK-", "")) {
       onConfirm();
     } else {
-      setError(`Verification failed! Expected "${expected}"`);
+      setError("Incorrect token code. Please verify and try again.");
     }
   };
 
@@ -479,7 +479,7 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }) => {
       }
 
       if (newStatus === "completed" && !tokenVerified) {
-        const activeToken = paymentSuccessData?.tokenNumber || order.tokenNumber || `TK-${order._id.substring(order._id.length - 4).toUpperCase()}`;
+        const activeToken = paymentSuccessData?.tokenNumber || order.tokenNumber || `TK-${order._id.toString().slice(-4).toUpperCase()}`;
         setExpectedToken(activeToken);
         setPendingCompleteData({ paymentSuccessData });
         setShowTokenVerify(true);
@@ -680,6 +680,8 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
   const [paymentMethod, setPaymentMethod] = useState("Cash"); // Cash, Online (Scanner)
   const [createdOrder, setCreatedOrder] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
+  const [mockPaymentData, setMockPaymentData] = useState(null);
 
   // Load branch menu items on mount
   useEffect(() => {
@@ -742,9 +744,97 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
   const gst = subtotal * 0.05; // 5% GST
   const grandTotal = subtotal + gst;
 
-  const handlePlaceOrder = async () => {
+  // Helper to load external script dynamically
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePlaceOrder = async (overridePaymentParams = null) => {
     if (cartItemsCount === 0) {
       toast.error("Please add at least one item to cart.");
+      return;
+    }
+    
+    // If online payment is selected and no payment details have been provided yet, initiate Razorpay
+    if (paymentMethod === "Online" && !overridePaymentParams) {
+      setSubmitting(true);
+      try {
+        // Create order at backend
+        let razorpayOrder;
+        try {
+          const orderCreateRes = await axios.post("http://localhost:5001/api/order/razorpay-order", {
+            amount: Math.round(grandTotal * 100), // in Paise
+          }, { withCredentials: true });
+          razorpayOrder = orderCreateRes.data;
+        } catch (e) {
+          console.warn("Backend razorpay-order creation failed, utilizing mock sandbox order data:", e);
+          razorpayOrder = {
+            id: `order_mock_${Date.now()}`,
+            amount: Math.round(grandTotal * 100),
+            currency: "INR",
+            key_id: "rzp_test_placeholder_key",
+            isMock: true
+          };
+        }
+
+        const options = {
+          key: razorpayOrder.key_id,
+          amount: razorpayOrder.amount,
+          currency: "INR",
+          name: "QuickBite POS Counter Checkout",
+          description: `Payment for Counter Order by ${customerName || "Guest"}`,
+          order_id: razorpayOrder.id,
+          handler: async (response) => {
+            console.log("Razorpay payment counter checkout response received:", response);
+            // Verify payment / proceed to save order directly
+            await handlePlaceOrder({
+              paid: true,
+              razorpayOrderId: response.razorpay_order_id || razorpayOrder.id,
+              razorpayPaymentId: response.razorpay_payment_id || `pay_mock_${Date.now()}`
+            });
+          },
+          theme: {
+            color: "#10b981",
+          },
+        };
+
+        if (razorpayOrder.isMock) {
+          console.warn("⚠️ Razorpay in sandbox mock fallback mode.");
+          setMockPaymentData({ options, order: razorpayOrder });
+          setShowMockPaymentModal(true);
+          setSubmitting(false);
+          return;
+        }
+
+        const loaded = await loadRazorpayScript();
+        if (!loaded || !window.Razorpay) {
+          console.warn("⚠️ Razorpay SDK failed to load, launching sandbox mock payment modal.");
+          setMockPaymentData({ options, order: razorpayOrder });
+          setShowMockPaymentModal(true);
+          setSubmitting(false);
+          return;
+        }
+
+        try {
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+        } catch (sdkError) {
+          console.error("⚠️ Razorpay SDK open exception, falling back to mock payment modal:", sdkError);
+          setMockPaymentData({ options, order: razorpayOrder });
+          setShowMockPaymentModal(true);
+        }
+      } catch (err) {
+        console.error("Razorpay initiation error on staff counter POS:", err);
+        toast.error("Failed to initiate counter online payment checkout.");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
     
@@ -770,7 +860,9 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
         customerName: customerName || "Guest Customer",
         payment: {
           method: paymentMethod,
-          paid: paymentMethod === "Online"
+          paid: overridePaymentParams ? overridePaymentParams.paid : (paymentMethod === "Online" ? true : false),
+          razorpayOrderId: overridePaymentParams ? overridePaymentParams.razorpayOrderId : null,
+          razorpayPaymentId: overridePaymentParams ? overridePaymentParams.razorpayPaymentId : null
         }
       };
 
@@ -1244,10 +1336,16 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center my-3 border-dashed">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pickup Token</p>
                   <p className="text-2xl font-black text-green-700 mt-1">
-                    {createdOrder.tokenNumber || "PENDING PAYMENT"}
+                    {createdOrder.tokenNumber || `TK-${createdOrder._id.toString().slice(-4).toUpperCase()}`}
                   </p>
-                  {!createdOrder.payment?.paid && (
-                    <p className="text-[9px] font-extrabold text-rose-600 mt-1">Collect physical cash before pickup</p>
+                  {createdOrder.payment?.paid ? (
+                    <p className="text-[9px] font-extrabold text-emerald-600 mt-1 uppercase tracking-wider flex items-center justify-center gap-1">
+                      <span>✓</span> Token Active
+                    </p>
+                  ) : (
+                    <p className="text-[9px] font-extrabold text-amber-600 mt-1 uppercase tracking-wider flex items-center justify-center gap-1 animate-pulse">
+                      <span>⚠️</span> Unpaid Counter Checkout - Pay at pickup
+                    </p>
                   )}
                 </div>
 
@@ -1324,6 +1422,91 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
 
         </div>
       </div>
+
+      {/* 💳 HIGH-FIDELITY QUICKBITE PAYMENT SANDBOX FALLBACK MODAL FOR OFFLINE ORDERS */}
+      {showMockPaymentModal && mockPaymentData && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md shadow-2xl p-6 md:p-8 animate-scale-up text-white">
+            
+            {/* Header branding */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+              <div className="flex items-center space-x-2">
+                <span className="text-2xl font-bold">⚡</span>
+                <span className="font-extrabold text-lg tracking-wider bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                  RAZORPAY TEST GATEWAY (POS)
+                </span>
+              </div>
+              <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                Counter Sandbox
+              </span>
+            </div>
+
+            {/* Price Details Card */}
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 mb-6 text-center shadow-inner">
+              <p className="text-slate-400 text-xs uppercase tracking-widest font-bold">Amount to Collect</p>
+              <h3 className="text-4xl font-black mt-2 text-white">
+                ₹{(mockPaymentData.order.amount / 100).toFixed(2)}
+              </h3>
+              <p className="text-slate-500 text-xs mt-1.5 font-mono">
+                Order ID: {mockPaymentData.order.id}
+              </p>
+            </div>
+
+            {/* Dummy Card Form Graphics */}
+            <div className="space-y-4 mb-6">
+              <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <span className="text-xl">💳</span>
+                  <div>
+                    <p className="text-xs text-slate-400 font-bold">Standard Test Card</p>
+                    <p className="text-sm font-mono text-slate-200 mt-0.5">4111 1111 1111 1111</p>
+                  </div>
+                </div>
+                <span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">VISA</span>
+              </div>
+
+              <div className="flex items-center space-x-2 text-xs text-slate-400">
+                <span>🛡️</span>
+                <span>Fully simulated secure end-to-end sandbox session.</span>
+              </div>
+            </div>
+
+            {/* Checkout Action Buttons */}
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowMockPaymentModal(false);
+                  try {
+                    await mockPaymentData.options.handler({
+                      razorpay_order_id: mockPaymentData.order.id,
+                      razorpay_payment_id: `pay_mock_${Date.now()}`,
+                      razorpay_signature: "mock_signature_approved"
+                    });
+                  } catch (err) {
+                    console.error("Mock handler execution failed:", err);
+                    alert("Mock payment handler failed.");
+                  }
+                }}
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition duration-200 shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center space-x-2 text-base cursor-pointer"
+              >
+                <span>Simulate Payment</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMockPaymentModal(false);
+                  alert("Counter checkout payment cancelled.");
+                }}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition duration-200 text-sm cursor-pointer"
+              >
+                Cancel Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1398,6 +1581,7 @@ function OrderPage() {
   };
 
   const handleQuickStatusUpdate = async (orderId, currentStatus, action) => {
+    if (pendingTokenOrder || pendingPaymentOrder) return;
     let nextStatus = currentStatus;
     const s = String(currentStatus).toLowerCase();
     
@@ -1430,7 +1614,7 @@ function OrderPage() {
               setPendingPaymentOrder(null);
 
               // Immediately open Token Verification
-              const activeToken = payRes.data?.tokenNumber || targetOrder.tokenNumber || `TK-${orderId.substring(orderId.length - 4).toUpperCase()}`;
+              const activeToken = payRes.data?.tokenNumber || targetOrder.tokenNumber || `TK-${orderId.toString().slice(-4).toUpperCase()}`;
               setPendingTokenOrder({
                 order: targetOrder,
                 expectedToken: activeToken,
@@ -1465,7 +1649,7 @@ function OrderPage() {
         return;
       } else {
         // Order is already paid, go straight to Token Verification
-        const activeToken = targetOrder.tokenNumber || `TK-${orderId.substring(orderId.length - 4).toUpperCase()}`;
+        const activeToken = targetOrder.tokenNumber || `TK-${orderId.toString().slice(-4).toUpperCase()}`;
         setPendingTokenOrder({
           order: targetOrder,
           expectedToken: activeToken,
@@ -1761,9 +1945,14 @@ function OrderPage() {
                                 🪑 Table: {order.table}
                               </span>
                             )}
-                            {order.tokenNumber ? (
+                            {order.tokenNumber && (
                               <span className="font-black text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
                                 🎟️ Token: {order.tokenNumber}
+                              </span>
+                            )}
+                            {order.payment?.paid ? (
+                              <span className="font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                                ✓ Paid ({order.payment?.method || "Online"})
                               </span>
                             ) : (
                               <span className={`font-black px-2 py-0.5 rounded border animate-pulse ${

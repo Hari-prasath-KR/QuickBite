@@ -389,7 +389,7 @@ const TokenVerificationModal = ({ tokenNumber, onClose, onConfirm }) => {
     if (entered === expected || entered === expected.replace("TK-", "")) {
       onConfirm();
     } else {
-      setError(`Verification failed! Expected "${expected}"`);
+      setError("Incorrect token code. Please verify and try again.");
     }
   };
 
@@ -506,7 +506,7 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
       }
 
       if (payloadStatus === "completed" && !tokenVerified) {
-        const activeToken = paymentData?.tokenNumber || order.tokenNumber || `TK-${order._id.substring(order._id.length - 4).toUpperCase()}`;
+        const activeToken = paymentData?.tokenNumber || order.tokenNumber || `TK-${order._id.toString().slice(-4).toUpperCase()}`;
         setExpectedToken(activeToken);
         setPendingCompleteData({ paymentSuccessData: paymentData });
         setShowTokenVerify(true);
