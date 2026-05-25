@@ -881,7 +881,7 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
       toast.success("Order created successfully!");
     } catch (err) {
       console.error("Error creating offline order:", err);
-      toast.error("Failed to place offline order.");
+      toast.error(err.response?.data?.message || "Failed to place offline order.");
     } finally {
       setSubmitting(false);
     }

@@ -8,11 +8,54 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Helper to get a fresh Razorpay instance dynamically
+import { BranchMenuItem } from "../models/menuItem.js";
+
+// Helper to get a fresh Razorpay instance dynamically
 const getRazorpayInstance = () => {
   return new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder_key",
     key_secret: process.env.RAZORPAY_KEY_SECRET || "placeholder_secret"
   });
+};
+
+// Helper to validate and deduct menu item stock for a branch
+const validateAndDeductStock = async (branchId, items) => {
+  if (!branchId || !items || items.length === 0) return { success: true };
+
+  // 1) Validate stock for all items
+  const assignments = [];
+  for (const item of items) {
+    const branchItem = await BranchMenuItem.findOne({
+      branchId,
+      menuItemId: item.itemId
+    });
+
+    if (!branchItem || !branchItem.isAvailable) {
+      return {
+        success: false,
+        message: `"${item.name}" is currently not available.`
+      };
+    }
+
+    if (branchItem.quantity < item.quantity) {
+      return {
+        success: false,
+        message: `Only ${branchItem.quantity} of "${item.name}" is available.`
+      };
+    }
+    assignments.push({ branchItem, quantityOrdered: item.quantity });
+  }
+
+  // 2) Deduct stock and save
+  for (const { branchItem, quantityOrdered } of assignments) {
+    branchItem.quantity = Math.max(0, branchItem.quantity - quantityOrdered);
+    if (branchItem.quantity === 0) {
+      branchItem.isAvailable = false; // Mark stock out if quantity becomes 0
+    }
+    await branchItem.save();
+  }
+
+  return { success: true };
 };
 
 
@@ -28,6 +71,14 @@ export const addOrder = async (req, res) => {
       const branch = await Branch.findById(branchId);
       if (branch && branch.status === "Inactive") {
         return res.status(400).json({ message: "This branch is currently offline or under maintenance break and is not accepting online orders." });
+      }
+    }
+
+    // Verify and deduct stock for each item in the order
+    if (branchId) {
+      const stockResult = await validateAndDeductStock(branchId, items);
+      if (!stockResult.success) {
+        return res.status(400).json({ message: stockResult.message });
       }
     }
     
@@ -152,6 +203,14 @@ export const verifyRazorpayPayment = async (req, res) => {
       const branch = await Branch.findById(branchId);
       if (branch && branch.status === "Inactive") {
         return res.status(400).json({ message: "This branch is currently offline or under maintenance break and is not accepting online orders." });
+      }
+    }
+
+    // Verify and deduct stock for each item in the order
+    if (branchId) {
+      const stockResult = await validateAndDeductStock(branchId, items);
+      if (!stockResult.success) {
+        return res.status(400).json({ message: stockResult.message });
       }
     }
 

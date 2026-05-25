@@ -259,7 +259,7 @@ const OrderPage = () => {
           toast.success("Order placed successfully with PayLater!");
         } catch (err) {
           console.error("Failed to place PayLater order:", err);
-          alert("Failed to place order. Please try again.");
+          alert(err.response?.data?.message || "Failed to place order. Please try again.");
         } finally {
           setCheckoutLoading(false);
         }
@@ -346,7 +346,7 @@ const OrderPage = () => {
                 console.error("Direct order fallback failed:", directErr);
               }
             }
-            alert("Payment verification failed. Please try again.");
+            alert(directErr.response?.data?.message || "Payment verification failed. Please try again.");
           }
         },
         prefill: {
@@ -429,7 +429,7 @@ const OrderPage = () => {
             setIsCartVisible(false);
           } catch (verifyErr) {
             console.error("Direct fallback placement failed:", verifyErr);
-            alert("Payment failed to verify. Please try again.");
+            alert(verifyErr.response?.data?.message || "Payment failed to verify. Please try again.");
           }
         }
       };

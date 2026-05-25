@@ -2,7 +2,7 @@ import { BranchMenuItem } from "../models/menuItem.js";
 export const getMenuByBranch = async (req, res) => {
   try {
     const { branchId } = req.params;
-    const menuItems = await BranchMenuItem.find({ branchId })
+    const menuItems = await BranchMenuItem.find({ branchId, isAvailable: true })
       .populate({
         path: "menuItemId",
         model: "MenuItem",
