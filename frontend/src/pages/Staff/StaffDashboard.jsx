@@ -503,6 +503,10 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
         );
         toast.success("Payment marked as successful!");
         paymentData = payRes.data;
+        // Instantly notify parent that payment was successful (keeping modal open)
+        if (onStatusUpdated) {
+          onStatusUpdated(order._id, order.status, paymentData, false);
+        }
       }
 
       if (payloadStatus === "completed" && !tokenVerified) {
@@ -524,7 +528,7 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
 
       console.log("Status Updated:", res.data);
       toast.success("Order status updated successfully!");
-      if (onStatusUpdated) onStatusUpdated(order._id, newStatus, targetPaymentData);
+      if (onStatusUpdated) onStatusUpdated(order._id, payloadStatus, targetPaymentData, true);
       onClose();
     } catch (err) {
       console.error("Error updating status", err);
@@ -831,7 +835,7 @@ const StaffDashboard = () => {
   const formattedDate = time.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   
-  const handleUpdateOrderStatus = (orderId, newStatusLabel, paymentData = null) => {
+  const handleUpdateOrderStatus = (orderId, newStatusLabel, paymentData = null, shouldClose = true) => {
     setRecentOrders(prev =>
       prev
         .map(order => {
@@ -850,7 +854,20 @@ const StaffDashboard = () => {
         })
     );
 
-    setSelectedOrder(null);
+    if (shouldClose) {
+      setSelectedOrder(null);
+    } else {
+      setSelectedOrder(prev => {
+        if (prev && prev._id === orderId) {
+          const updated = { ...prev, status: newStatusLabel };
+          if (paymentData) {
+            return { ...updated, ...paymentData };
+          }
+          return updated;
+        }
+        return prev;
+      });
+    }
   };
 
   useEffect(() => {

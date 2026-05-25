@@ -476,6 +476,10 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }) => {
         );
         toast.success("Payment marked as successful!");
         paymentSuccessData = payRes.data;
+        // Instantly notify parent that payment succeeded (keeping modal open)
+        if (onStatusUpdated) {
+          onStatusUpdated(order._id, order.status, paymentSuccessData);
+        }
       }
 
       if (newStatus === "completed" && !tokenVerified) {
@@ -1613,6 +1617,13 @@ function OrderPage() {
               toast.success("Payment marked as successful!");
               setPendingPaymentOrder(null);
 
+              // Instantly update local orders state in-place with payment success details
+              setOrders((prev) =>
+                prev.map((o) =>
+                  o._id === orderId ? { ...o, ...payRes.data } : o
+                )
+              );
+
               // Immediately open Token Verification
               const activeToken = payRes.data?.tokenNumber || targetOrder.tokenNumber || `TK-${orderId.toString().slice(-4).toUpperCase()}`;
               setPendingTokenOrder({
@@ -1710,6 +1721,18 @@ function OrderPage() {
         return order;
       })
     );
+
+    // Keep active selectedOrder synced in-place
+    setSelectedOrder((prev) => {
+      if (prev && prev._id === orderId) {
+        const updated = { ...prev, status: newStatus };
+        if (paymentData) {
+          return { ...updated, ...paymentData };
+        }
+        return updated;
+      }
+      return prev;
+    });
   };
 
   const handleMarkPaymentSuccess = async (orderId) => {
