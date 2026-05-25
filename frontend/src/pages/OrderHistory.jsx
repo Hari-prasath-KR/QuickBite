@@ -201,11 +201,15 @@ const OrderHistory = () => {
                           ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
                           : "bg-red-50 text-red-700 border-red-200"
                       }`}>
-                        {order.payment?.paid
-                          ? "💳 Paid Online"
-                          : order.payment?.method === "PayLater"
-                          ? "⏱ Pay Later at Counter"
-                          : "💵 Unpaid"}
+                        {order.payment?.paid ? (
+                          order.payment?.method === "Cash" ? "💵 Paid (Cash)" :
+                          order.payment?.method === "Wallet" ? "✓ Paid (Wallet)" :
+                          "💳 Paid (Online)"
+                        ) : order.payment?.method === "PayLater" ? (
+                          "⏱ Pay Later at Counter"
+                        ) : (
+                          "💵 Unpaid"
+                        )}
                       </span>
                     </div>
                   </div>
@@ -317,11 +321,15 @@ const OrderHistory = () => {
                       ? "bg-amber-100 text-amber-800 animate-pulse"
                       : "bg-red-100 text-red-800"
                   }`}>
-                    {selectedOrder.payment?.paid
-                      ? "PAID ONLINE"
-                      : selectedOrder.payment?.method === "PayLater"
-                      ? "⏱ PAY LATER AT COUNTER"
-                      : "UNPAID"}
+                    {selectedOrder.payment?.paid ? (
+                      selectedOrder.payment?.method === "Cash" ? "PAID (CASH)" :
+                      selectedOrder.payment?.method === "Wallet" ? "PAID (WALLET)" :
+                      "PAID (ONLINE)"
+                    ) : selectedOrder.payment?.method === "PayLater" ? (
+                      "⏱ PAY LATER AT COUNTER"
+                    ) : (
+                      "UNPAID"
+                    )}
                   </span>
                   <p className="text-slate-400 text-xs font-mono mt-2">
                     {new Date(selectedOrder.createdAt).toLocaleDateString()} {new Date(selectedOrder.createdAt).toLocaleTimeString()}

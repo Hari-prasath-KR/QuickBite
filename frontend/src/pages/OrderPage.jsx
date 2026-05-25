@@ -744,7 +744,15 @@ const OrderPage = () => {
                       ? "bg-amber-500/10 border border-amber-500/25 text-amber-700 animate-pulse"
                       : "bg-emerald-500/10 border border-emerald-500/25 text-emerald-700"
                   }`}>
-                    {receiptData.payment?.method === "PayLater" ? "⏱ Pay Later at Pickup" : "💳 Paid Online"}
+                    {receiptData.payment?.method === "PayLater" ? (
+                      "⏱ Pay Later at Pickup"
+                    ) : receiptData.payment?.method === "Cash" ? (
+                      "💵 Paid (Cash)"
+                    ) : receiptData.payment?.method === "Wallet" ? (
+                      "✓ Paid (Wallet)"
+                    ) : (
+                      "💳 Paid (Online)"
+                    )}
                   </span>
                   <p className="text-slate-400 text-xs font-mono mt-2">
                     {new Date(receiptData.createdAt).toLocaleDateString()} {new Date(receiptData.createdAt).toLocaleTimeString()}

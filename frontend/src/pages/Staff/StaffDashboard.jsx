@@ -612,11 +612,15 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
                   ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
                   : "bg-red-50 text-red-700 border-red-200"
               }`}>
-                {order.payment?.paid
-                  ? "💳 Paid Online"
-                  : order.payment?.method === "PayLater"
-                  ? "⏱ Pay Later at Counter"
-                  : "💵 Unpaid"}
+                {order.payment?.paid ? (
+                  order.payment?.method === "Cash" ? "💵 Paid (Cash)" :
+                  order.payment?.method === "Wallet" ? "✓ Paid (Wallet)" :
+                  "💳 Paid (Online)"
+                ) : order.payment?.method === "PayLater" ? (
+                  "⏱ Pay Later at Counter"
+                ) : (
+                  "💵 Unpaid"
+                )}
               </span>
             </div>
 
@@ -740,11 +744,15 @@ const RecentOrders = ({ orders, onOrderClick }) => {
                   ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
                   : "bg-red-50 text-red-700 border-red-200"
               }`}>
-                {order.payment?.paid
-                  ? "💳 Paid"
-                  : order.payment?.method === "PayLater"
-                  ? "⏱ Pay Later"
-                  : "💵 Unpaid"}
+                {order.payment?.paid ? (
+                  order.payment?.method === "Cash" ? "💵 Paid (Cash)" :
+                  order.payment?.method === "Wallet" ? "✓ Paid (Wallet)" :
+                  "💳 Paid (Online)"
+                ) : order.payment?.method === "PayLater" ? (
+                  "⏱ Pay Later"
+                ) : (
+                  "💵 Unpaid"
+                )}
               </span>
               <div className={`flex items-center text-xs font-black px-3 py-1 rounded-full border whitespace-nowrap ${getStatusClass(order.status)}`}>
                 <span>{order.status}</span>
