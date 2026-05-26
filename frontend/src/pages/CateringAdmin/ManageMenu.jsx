@@ -53,11 +53,11 @@ const MenuItemCard = ({ item, onCardClick, onUpdate, onDelete }) => {
         <div>
           <div className="flex justify-between items-start gap-2">
             <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">{item.name}</h3>
-            <span className="self-start rounded-xl bg-slate-100/80 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-550 border border-slate-200/40">
+            <span className="self-start rounded-xl bg-slate-100/80 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-700 border border-slate-200/40">
               {item.category}
             </span>
           </div>
-          <p className="mt-2 text-slate-650 text-xs font-semibold line-clamp-3 leading-relaxed">
+          <p className="mt-2 text-slate-800 text-xs font-semibold line-clamp-3 leading-relaxed">
             {item.description || 'No detailed description provided for this dish.'}
           </p>
         </div>
@@ -65,7 +65,7 @@ const MenuItemCard = ({ item, onCardClick, onUpdate, onDelete }) => {
         <div className="mt-4 pt-4 border-t border-slate-200/30">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Base Rate</span>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Base Rate</span>
               <p className="text-base font-black text-slate-800">
                 ₹{(item.defaultPrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </p>
@@ -75,14 +75,14 @@ const MenuItemCard = ({ item, onCardClick, onUpdate, onDelete }) => {
             <div className="flex gap-2">
               <button 
                 onClick={(e) => { e.stopPropagation(); onUpdate(item); }}  
-                className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/25 text-blue-650 transition active:scale-95 shadow-sm border border-blue-500/20"
+                className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/25 text-blue-700 transition active:scale-95 shadow-sm border border-blue-500/20"
                 title="Edit Item"
               >
                 <Edit className="w-4 h-4" />
               </button>
               <button  
                 onClick={(e) => { e.stopPropagation(); onDelete(item._id); }} 
-                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/25 text-rose-650 transition active:scale-95 shadow-sm border border-rose-500/20"
+                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/25 text-rose-700 transition active:scale-95 shadow-sm border border-rose-500/20"
                 title="Delete Item"
               >
                 <Trash2 className="w-4 h-4" />
@@ -289,7 +289,7 @@ function ManageMenu() {
             
             {/* Search Input */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-750 ml-1">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-800 ml-1">
                 Search Dishes
               </label>
               <div className="relative">
@@ -306,7 +306,7 @@ function ManageMenu() {
 
             {/* Category select filter */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="category-filter" className="text-xs font-black uppercase tracking-widest text-slate-750 ml-1">
+              <label htmlFor="category-filter" className="text-xs font-black uppercase tracking-widest text-slate-800 ml-1">
                 Filter by Category
               </label>
               <select
@@ -326,7 +326,7 @@ function ManageMenu() {
 
             {/* Branch select filter */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="branch-filter" className="text-xs font-black uppercase tracking-widest text-slate-750 ml-1">
+              <label htmlFor="branch-filter" className="text-xs font-black uppercase tracking-widest text-slate-800 ml-1">
                 Filter by Branch Assigned
               </label>
               <select

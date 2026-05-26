@@ -53,25 +53,25 @@ const StaffCard = ({ staff, onDelete, onUpdate, onUnassign }) => {
             <h3 className="text-base font-extrabold text-slate-900 tracking-tight truncate" title={staff.name}>
               {staff.name}
             </h3>
-            <p className="text-[10px] font-semibold text-slate-450 truncate flex items-center gap-1 mt-0.5">
+            <p className="text-[10px] font-semibold text-slate-700 truncate flex items-center gap-1 mt-0.5">
               <Mail className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{staff.email}</span>
             </p>
           </div>
         </div>
         
-        <div className="pt-3 border-t border-slate-200/40 text-slate-700 text-xs font-semibold space-y-1.5">
+        <div className="pt-3 border-t border-slate-200/40 text-slate-800 text-xs font-semibold space-y-1.5">
           <p className="flex items-center gap-2">
             <Building className="w-4 h-4 text-emerald-600 flex-shrink-0" />
             <span className="text-slate-800">Branch:</span> 
             <span className={`truncate max-w-[150px] font-bold ${
-              isAssigned ? 'text-slate-650' : 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg text-[9px] uppercase tracking-wider font-black'
+              isAssigned ? 'text-slate-800' : 'text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg text-[9px] uppercase tracking-wider font-black'
             }`}>{staff.branchId?.name || 'Unassigned / Floating'}</span>
           </p>
           <p className="flex items-center gap-2">
-            <UserCheck className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <UserCheck className="w-4 h-4 text-slate-500 flex-shrink-0" />
             <span className="text-slate-800">Role:</span>
-            <span className="text-slate-650 bg-slate-100 px-2 py-0.5 rounded-lg text-[9px] uppercase tracking-wider font-black">
+            <span className="text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg text-[9px] uppercase tracking-wider font-black">
               POS Staff
             </span>
           </p>
@@ -286,7 +286,7 @@ function ManageStaff() {
           {/* Filtering Control Center */}
           <div className="w-full max-w-md mb-8">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-750 ml-1">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-800 ml-1">
                 Search Personnel
               </label>
               <div className="relative">
