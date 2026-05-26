@@ -27,7 +27,7 @@ import searchRoutes from "./routes/searchRoutes.js";
 
 const PORT=process.env.PORT||5001
 
-connectDB(process.env.MONGO_URI_COMPASS)
+connectDB(process.env.MONGO_URI_ATLAS)
 
 const app=express();
 app.use(express.json());
