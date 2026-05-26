@@ -685,13 +685,29 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
 
 const RecentOrders = ({ orders, onOrderClick }) => {
   const [showAll, setShowAll] = useState(false);
-  const displayOrders = showAll ? orders : orders.slice(0, 5);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredOrders = orders.filter(order => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+    
+    const customer = (order.customerName || order.userId?.name || "").toLowerCase();
+    const table = String(order.table || "").toLowerCase();
+    const token = String(order.tokenNumber || "").toLowerCase();
+    const itemsMatched = (order.items || []).some(item => 
+      (item.name || "").toLowerCase().includes(query)
+    );
+    
+    return customer.includes(query) || table.includes(query) || token.includes(query) || itemsMatched;
+  });
+
+  const displayOrders = showAll ? filteredOrders : filteredOrders.slice(0, 5);
 
   if (!orders || orders.length === 0) {
     return (
-      <div className="bg-white/80 backdrop-blur-sm border border-gray-200 p-6 rounded-xl shadow-lg">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Orders</h2>
-        <p className="text-gray-500">No recent orders to display.</p>
+      <div className="bg-white/45 backdrop-blur-md border border-white/35 p-5 rounded-3xl shadow-lg transition-all hover:scale-[1.01]">
+        <h2 className="text-xl font-black text-slate-800 mb-4 tracking-tight">Recent Orders</h2>
+        <p className="text-slate-500 text-xs font-semibold">No recent orders to display.</p>
       </div>
     );
   }
@@ -700,7 +716,7 @@ const RecentOrders = ({ orders, onOrderClick }) => {
     String(status).toLowerCase().includes("completed")
       ? "text-green-600 bg-green-100 border-green-200"
       : String(status).toLowerCase().includes("pending")
-      ? "text-red-600 bg-red-100 border-red-200"
+      ? "text-red-600 bg-red-100 border-red-200 animate-pulse"
       : "text-yellow-600 bg-yellow-100 border-yellow-250";
 
   const handleViewToggle = (e) => {
@@ -709,68 +725,81 @@ const RecentOrders = ({ orders, onOrderClick }) => {
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm border border-gray-200 p-6 rounded-xl shadow-lg">
+    <div className="bg-white/45 backdrop-blur-md border border-white/35 p-5 rounded-3xl shadow-lg transition-all hover:scale-[1.01]">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-gray-800">Recent Orders</h2>
-        {orders.length > 5 && (
-          <button onClick={handleViewToggle} className="text-sm text-green-600 hover:underline font-semibold">
-            {showAll ? "View less" : "View all"}
+        <h2 className="text-xl font-black text-slate-800 tracking-tight">Recent Orders</h2>
+        {filteredOrders.length > 5 && (
+          <button onClick={handleViewToggle} className="text-xs font-black text-emerald-600 hover:text-emerald-700 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-xl transition active:scale-95 cursor-pointer">
+            {showAll ? "Show Less" : "View All"}
           </button>
         )}
       </div>
 
       <div className="relative mb-4">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-        <input type="text" placeholder="Search recent orders" className="w-full bg-gray-50 border border-gray-300 rounded-md py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-yellow-300" />
+        <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <input 
+          type="text" 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by customer, table number, token..." 
+          className="w-full bg-white/30 border border-white/40 rounded-2xl py-2.5 pl-10 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-yellow-500 focus:bg-white transition"
+        />
       </div>
 
-      <ul className="space-y-3">
-        {displayOrders.map((order, index) => (
-          <li
-            key={order._id || index}
-            onClick={() => onOrderClick(order)}
-            className="flex flex-wrap justify-between items-center p-3.5 bg-gray-50 rounded-xl transition-colors hover:bg-yellow-100/50 cursor-pointer border border-gray-200 gap-3"
-          >
-            <div className="flex items-center space-x-4 min-w-0 flex-1 sm:flex-initial">
-              <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center font-black text-white shadow-md flex-shrink-0">
-                {order.customerName ? order.customerName.substring(0, 2).toUpperCase() : (order.userId?.name || "GS").substring(0, 2).toUpperCase()}
+      {filteredOrders.length === 0 ? (
+        <p className="text-slate-500 text-xs text-center py-6 font-semibold">No orders matching your search query.</p>
+      ) : (
+        <ul className="space-y-3">
+          {displayOrders.map((order, index) => (
+            <li
+              key={order._id || index}
+              onClick={() => onOrderClick(order)}
+              className="flex flex-wrap justify-between items-center p-3.5 bg-white/40 hover:bg-white/80 border border-white/30 rounded-2xl transition duration-200 cursor-pointer gap-3 shadow-sm hover:scale-[1.005]"
+            >
+              <div className="flex items-center space-x-4 min-w-0 flex-1 sm:flex-initial">
+                <div className="w-10 h-10 bg-gradient-to-tr from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center font-black text-white shadow-md flex-shrink-0 text-sm">
+                  {order.customerName ? order.customerName.substring(0, 2).toUpperCase() : (order.userId?.name || "GS").substring(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-extrabold text-slate-800 truncate text-sm">{order.customerName || order.userId?.name || "Guest"}</p>
+                  <p className="text-[10px] text-slate-500 font-bold mt-0.5">{order.items?.length || 0} {order.items?.length === 1 ? "item" : "items"} • Table {order.table || "N/A"}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="font-extrabold text-gray-800 truncate max-w-[140px] sm:max-w-[200px]">{order.customerName || order.userId?.name || "Guest"}</p>
-                <p className="text-xs text-slate-500 font-semibold">{order.items?.length || 0} items • Table {order.table || "N/A"}</p>
-              </div>
-            </div>
 
-            <div className="flex items-center space-x-3 flex-wrap sm:flex-nowrap gap-y-2">
-              <span className={`px-2.5 py-0.5 border text-[10px] font-black rounded-full uppercase tracking-wider whitespace-nowrap ${
-                order.payment?.paid
-                  ? "bg-green-50 text-green-700 border-green-200"
-                  : order.payment?.method === "PayLater"
-                  ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
-                  : "bg-red-50 text-red-700 border-red-200"
-              }`}>
-                {order.payment?.paid ? (
-                  order.payment?.method === "Cash" ? "💵 Paid (Cash)" :
-                  order.payment?.method === "Wallet" ? "✓ Paid (Wallet)" :
-                  "💳 Paid (Online)"
-                ) : order.payment?.method === "PayLater" ? (
-                  "⏱ Pay Later"
-                ) : (
-                  "💵 Unpaid"
-                )}
-              </span>
-              <div className={`flex items-center text-xs font-black px-3 py-1 rounded-full border whitespace-nowrap ${getStatusClass(order.status)}`}>
-                <span>{order.status}</span>
+              <div className="flex items-center space-x-3 flex-wrap sm:flex-nowrap gap-y-2">
+                <span className={`px-2.5 py-1 border text-[9px] font-black rounded-full uppercase tracking-wider whitespace-nowrap ${
+                  order.payment?.paid
+                    ? "bg-green-500/10 border-green-500/20 text-green-700"
+                    : order.payment?.method === "PayLater"
+                    ? "bg-amber-500/10 border-amber-500/25 text-amber-700 animate-pulse"
+                    : "bg-rose-500/10 border-rose-500/20 text-rose-700"
+                }`}>
+                  {order.payment?.paid ? (
+                    order.payment?.method === "Cash" ? "💵 Paid (Cash)" :
+                    order.payment?.method === "Wallet" ? "✓ Paid (Wallet)" :
+                    "💳 Paid (Online)"
+                  ) : order.payment?.method === "PayLater" ? (
+                    "⏱ Pay Later"
+                  ) : (
+                    "💵 Unpaid"
+                  )}
+                </span>
+                <div className={`flex items-center text-[9px] font-black px-3 py-1 rounded-full border whitespace-nowrap ${getStatusClass(order.status)}`}>
+                  <span>{order.status}</span>
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      {orders.length > 5 && !showAll && (
+      {filteredOrders.length > 5 && !showAll && (
         <div className="text-center mt-4">
-          <button onClick={handleViewToggle} className="text-sm text-green-600 hover:underline font-semibold">
-            Show {orders.length - 5} more orders...
+          <button 
+            onClick={() => setShowAll(true)} 
+            className="text-xs font-black text-slate-500 hover:text-slate-800 transition"
+          >
+            Show {filteredOrders.length - 5} more orders...
           </button>
         </div>
       )}
@@ -778,50 +807,35 @@ const RecentOrders = ({ orders, onOrderClick }) => {
   );
 };
 const PopularDishes = ({ dishes }) => {
-  // Common classes defined for clarity
-  const cardClasses = "bg-white border border-gray-200 p-6 rounded-xl shadow-lg h-full";
-  const headingClasses = "text-xl font-bold text-gray-900";
-  const viewAllClasses = "text-sm text-blue-600 hover:underline"; // Blue link for light theme
-  const rankNumberClasses = "text-lg font-bold text-gray-400 w-6";
-  const dishNameClasses = "font-semibold text-gray-800";
-  const ordersClasses = "text-xs text-gray-500";
-  const listItemClasses = "flex items-center space-x-4";
-
   if (!dishes || dishes.length === 0) {
     return (
-      // Light theme styling for the empty state
-      <div className={cardClasses}>
-        <h2 className={headingClasses + " mb-4"}>Popular Dishes</h2>
-        <p className={ordersClasses}>Not enough data for popular dishes yet.</p>
+      <div className="bg-white/45 backdrop-blur-md border border-white/35 p-5 rounded-3xl shadow-lg transition-all hover:scale-[1.01]">
+        <h2 className="text-xl font-black text-slate-800 mb-4 tracking-tight">Popular Dishes</h2>
+        <p className="text-slate-500 text-xs font-semibold">Not enough data for popular dishes yet.</p>
       </div>
     );
   }
 
   return (
-    // Main card container set to white background and light border/shadow
-    <div className={cardClasses}>
+    <div className="bg-white/45 backdrop-blur-md border border-white/35 p-5 rounded-3xl shadow-lg h-full transition-all hover:scale-[1.01]">
       <div className="flex justify-between items-center mb-4">
-        {/* Dark text for the main heading */}
-        <h2 className={headingClasses}>Popular Dishes</h2>
-        {/* Standard link color */}
-        <a href="#" className={viewAllClasses}>View all</a>
+        <h2 className="text-xl font-black text-slate-800 tracking-tight">Popular Dishes</h2>
+        <a href="#" className="text-xs font-black text-emerald-600 hover:text-emerald-700 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-xl transition active:scale-95 cursor-pointer">View all</a>
       </div>
       <ul className="space-y-4">
         {dishes.slice(0, 5).map((dish, index) => (
-          // List item structure matching the image's layout
-          <li key={index} className={listItemClasses}>
-            {/* Faded gray text for the rank number */}
-            <span className={rankNumberClasses}>
+          <li key={index} className="flex items-center space-x-4 bg-white/30 border border-white/20 p-3 rounded-2xl hover:bg-white/50 transition">
+            <span className="text-lg font-black text-slate-400 w-6">
               {String(index + 1).padStart(2, "0")}
             </span>
             <img 
               src={dish.imageUrl || `https://placehold.co/40x40/FBBF24/FFFFFF?text=${dish.name.charAt(0)}`} 
               alt={dish.name} 
-              className="w-10 h-10 rounded-full object-cover" 
+              className="w-10 h-10 rounded-xl object-cover shadow-sm" 
             />
-            <div>
-              <p className={dishNameClasses}>{dish.name}</p>
-              <p className={ordersClasses}>Orders: {dish.orders}</p>
+            <div className="flex-1 min-w-0">
+              <p className="font-extrabold text-slate-800 text-sm truncate">{dish.name}</p>
+              <p className="text-xs text-slate-500 mt-0.5">Orders: {dish.orders}</p>
             </div>
           </li>
         ))}
