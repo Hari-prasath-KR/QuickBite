@@ -152,7 +152,7 @@ const OrderHistory = () => {
     if (!feedbackTargetCatering) return;
     setSubmittingFeedback(true);
     try {
-      await api.post("/feedback", {
+      await api.post("/admin/feedback", {
         cateringId: feedbackTargetCatering.cateringId,
         rating: feedbackRating,
         comment: feedbackComment
@@ -201,17 +201,17 @@ const OrderHistory = () => {
     if (isPaid) {
       if (status === "pending") {
         return { refund: total, penalty: 0, detail: "100% Full Refund (Pending status)" };
-      } else if (status === "preparing") {
+      } else if (status === "preparing" || status === "in progress") {
         return { refund: Number((total * 0.75).toFixed(2)), penalty: 0, detail: "75% Refund, 25% Cancellation Charge (Preparing status)" };
-      } else if (status === "ready") {
+      } else if (status === "ready" || status === "ready for service") {
         return { refund: Number((total * 0.50).toFixed(2)), penalty: 0, detail: "50% Refund, 50% Cancellation Charge (Ready status)" };
       }
     } else {
       if (status === "pending") {
         return { refund: 0, penalty: 0, detail: "0% Penalty (Pending status)" };
-      } else if (status === "preparing") {
+      } else if (status === "preparing" || status === "in progress") {
         return { refund: 0, penalty: Number((total * 0.25).toFixed(2)), detail: "25% Cancellation Penalty (Preparing status) will be deducted from your wallet" };
-      } else if (status === "ready") {
+      } else if (status === "ready" || status === "ready for service") {
         return { refund: 0, penalty: Number((total * 0.50).toFixed(2)), detail: "50% Cancellation Penalty (Ready status) will be deducted from your wallet" };
       }
     }
@@ -269,7 +269,12 @@ const OrderHistory = () => {
           <div className="space-y-6">
             {orders.map((order) => {
               const status = String(order.status).toLowerCase();
-              const canCancel = status === "pending" || status === "preparing" || status === "ready";
+              const canCancel = 
+                status === "pending" || 
+                status === "preparing" || 
+                status === "in progress" || 
+                status === "ready" || 
+                status === "ready for service";
               const isCompleted = status === "completed";
               const isFeedbackSubmitted = submittedFeedbackOrderIds.includes(order._id);
 
