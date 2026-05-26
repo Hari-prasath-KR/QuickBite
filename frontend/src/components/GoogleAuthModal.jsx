@@ -3,53 +3,75 @@ import { toast } from "react-hot-toast";
 
 const GoogleAuthModal = ({ isOpen, onClose, onSelect }) => {
   const [showSandbox, setShowSandbox] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [customName, setCustomName] = useState("");
   const [customEmail, setCustomEmail] = useState("");
   const [error, setError] = useState("");
+  const [sdkLoaded, setSdkLoaded] = useState(false);
 
+  // Poll or check for window.google to ensure SDK is fully available
   useEffect(() => {
-    if (isOpen && window.google) {
-      try {
-        const clientID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "1038283594025-mbf76t3tkgjcf710h3d4f1s8ltdge0t0.apps.googleusercontent.com";
+    if (!isOpen) return;
+
+    let checkInterval;
+    const initializeGoogleBtn = () => {
+      if (window.google && window.google.accounts) {
+        setSdkLoaded(true);
+        clearInterval(checkInterval);
         
-        window.google.accounts.id.initialize({
-          client_id: clientID,
-          callback: (response) => {
-            if (response.credential) {
-              onSelect({ credential: response.credential });
-            } else {
-              toast.error("Google authentication failed. Please try again.");
+        try {
+          const clientID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "1038283594025-mbf76t3tkgjcf710h3d4f1s8ltdge0t0.apps.googleusercontent.com";
+          
+          window.google.accounts.id.initialize({
+            client_id: clientID.trim() === "YOUR_GOOGLE_CLIENT_ID_HERE" ? "1038283594025-mbf76t3tkgjcf710h3d4f1s8ltdge0t0.apps.googleusercontent.com" : clientID,
+            callback: (response) => {
+              if (response.credential) {
+                onSelect({ credential: response.credential });
+              } else {
+                toast.error("Google authentication failed. Please try again.");
+              }
+            },
+            auto_select: false
+          });
+
+          // Wait a brief tick for DOM container to exist
+          setTimeout(() => {
+            const container = document.getElementById("real-google-btn-container");
+            if (container) {
+              window.google.accounts.id.renderButton(
+                container,
+                { 
+                  theme: "filled_blue", 
+                  size: "large", 
+                  width: "320", 
+                  text: "continue_with",
+                  shape: "pill"
+                }
+              );
             }
-          },
-          auto_select: false
-        });
+          }, 100);
 
-        // Render the official native Google button
-        window.google.accounts.id.renderButton(
-          document.getElementById("real-google-btn-container"),
-          { 
-            theme: "filled_blue", 
-            size: "large", 
-            width: "320", 
-            text: "continue_with",
-            shape: "pill"
-          }
-        );
-
-        // Optional One Tap prompt
-        window.google.accounts.id.prompt();
-      } catch (err) {
-        console.error("Google Client SDK initialization error:", err);
+        } catch (err) {
+          console.error("🔥 Google Client SDK initialization error:", err);
+        }
       }
-    }
+    };
+
+    // Try immediately
+    initializeGoogleBtn();
+
+    // Or poll every 300ms if script is loading async
+    checkInterval = setInterval(initializeGoogleBtn, 300);
+
+    return () => clearInterval(checkInterval);
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   const mockAccounts = [
-    { name: "Jane Doe", email: "jane.doe@gmail.com", avatar: "J", bg: "bg-purple-600" },
-    { name: "John Smith", email: "john.smith@gmail.com", avatar: "S", bg: "bg-blue-600" },
-    { name: "Alice Johnson", email: "alice.j@gmail.com", avatar: "A", bg: "bg-emerald-600" },
+    { name: "Jane Doe", email: "jane.doe@gmail.com", avatar: "J", bg: "bg-gradient-to-tr from-purple-500 to-indigo-600" },
+    { name: "John Smith", email: "john.smith@gmail.com", avatar: "S", bg: "bg-gradient-to-tr from-blue-500 to-cyan-600" },
+    { name: "Alice Johnson", email: "alice.j@gmail.com", avatar: "A", bg: "bg-gradient-to-tr from-emerald-500 to-teal-600" },
   ];
 
   const handleSelectAccount = (account) => {
@@ -78,108 +100,180 @@ const GoogleAuthModal = ({ isOpen, onClose, onSelect }) => {
     });
   };
 
+  const isConfigured = import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_GOOGLE_CLIENT_ID !== "YOUR_GOOGLE_CLIENT_ID_HERE";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300 animate-fadeIn">
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 transform scale-100 transition-all duration-300 animate-scaleUp">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-opacity duration-300 animate-fadeIn">
+      {/* Premium glowing background elements for visual wow-factor */}
+      <div className="absolute w-72 h-72 rounded-full bg-green-400/20 blur-3xl -top-10 -left-10 pointer-events-none"></div>
+      <div className="absolute w-72 h-72 rounded-full bg-yellow-300/20 blur-3xl -bottom-10 -right-10 pointer-events-none"></div>
+
+      <div className="relative w-full max-w-md bg-white/90 backdrop-blur-xl rounded-[32px] shadow-2xl overflow-hidden border border-white/50 transform scale-100 transition-all duration-300 animate-scaleUp flex flex-col max-h-[90vh]">
         
-        {/* Google Header Logo */}
-        <div className="flex flex-col items-center pt-8 pb-4">
-          <svg className="w-10 h-10" viewBox="0 0 24 24">
-            <path
-              fill="#4285F4"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22c-.21-.63-.35-1.3-.35-2.09C4.66 12.63 5.84 14.09 5.84 14.09z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-            />
-          </svg>
-          <h2 className="text-xl font-semibold mt-4 text-gray-800">
-            Sign in with Google
+        {/* Header / Brand Branding */}
+        <div className="flex flex-col items-center pt-8 pb-4 px-6 text-center">
+          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-yellow-300 flex items-center justify-center shadow-lg transform hover:scale-105 transition duration-350">
+            <span className="text-3xl animate-bounce">🍔</span>
+          </div>
+          <h2 className="text-2xl font-extrabold mt-3 text-slate-800 tracking-tight">
+            Continue with Google
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            to continue to <span className="font-semibold text-green-500">QuickBite 🍔</span>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            Access secure campus dining at <span className="font-bold text-green-500">QuickBite</span>
           </p>
         </div>
 
-        {/* Modal Content */}
-        <div className="px-8 pb-8 flex flex-col items-center">
+        {/* Scrollable Container to prevent overflow on smaller screens */}
+        <div className="px-6 pb-6 overflow-y-auto space-y-4 flex-1 scrollbar-thin">
           
           {/* NATIVE GOOGLE IDENTITY SIGN-IN BUTTON CONTAINER */}
-          <div className="w-full flex flex-col items-center py-4">
-            <div id="real-google-btn-container" className="my-2 min-h-[46px] flex items-center justify-center"></div>
-            <p className="text-[10px] text-gray-400 font-semibold mt-2 text-center">
-              Uses official Google authentication popups securely.
-            </p>
+          <div className="w-full flex flex-col items-center py-4 bg-slate-50/50 rounded-2xl border border-slate-100/80 px-4 shadow-inner">
+            {!sdkLoaded ? (
+              <div className="flex flex-col items-center py-3 space-y-2">
+                <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-[11px] text-slate-400 font-semibold">Connecting to Google Auth...</p>
+              </div>
+            ) : (
+              <>
+                <div id="real-google-btn-container" className="my-2 min-h-[46px] flex items-center justify-center"></div>
+                <p className="text-[10px] text-slate-400 font-semibold mt-2 text-center flex items-center gap-1">
+                  <span className="text-emerald-500">✓</span> Official secure Google OAuth 2.0 popup
+                </p>
+              </>
+            )}
           </div>
 
-          {/* ADVANCED DEVELOPER SANDBOX CHOOSER */}
-          <div className="w-full border-t border-gray-150/60 pt-4 mt-4">
+          {/* OAUTH 2.0 DYNAMIC RESOLUTION GUIDE CARD */}
+          <div className="w-full border border-amber-100 bg-amber-50/45 rounded-2xl overflow-hidden transition-all duration-300">
+            <button
+              type="button"
+              onClick={() => setShowGuide(!showGuide)}
+              className="w-full flex items-center justify-between py-3 px-4 text-left focus:outline-none hover:bg-amber-100/30 transition duration-150"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">🔑</span>
+                <span className="text-xs font-bold text-amber-800 tracking-wide">
+                  Fixing "Access Blocked / Authorization Error"
+                </span>
+              </div>
+              <span className="text-xs font-bold text-amber-700">
+                {showGuide ? "Hide" : "Show Setup"}
+              </span>
+            </button>
+
+            {showGuide && (
+              <div className="px-4 pb-4 pt-1 text-[11px] text-amber-900 border-t border-amber-100/50 space-y-2.5 leading-relaxed bg-white/50">
+                <p className="font-medium text-slate-600">
+                  Google blocks requests if the website origin is not authorized. Follow these simple steps to solve it:
+                </p>
+                <ol className="list-decimal list-inside space-y-1.5 font-medium text-slate-700">
+                  <li>
+                    Go to the <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-blue-600 font-bold hover:underline">Google Cloud Console</a>.
+                  </li>
+                  <li>
+                    Select your project and open <strong>APIs & Services &gt; Credentials</strong>.
+                  </li>
+                  <li>
+                    Edit your <strong>OAuth 2.0 Client ID</strong> under "Web application".
+                  </li>
+                  <li>
+                    Add <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-slate-800">http://localhost:5173</code> under <strong>Authorized JavaScript Origins</strong>.
+                  </li>
+                  <li>
+                    Copy your Client ID, open <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-slate-800">frontend/.env</code>, set:
+                    <div className="bg-slate-900 text-white rounded p-1.5 font-mono text-[9px] mt-1.5 select-all border border-slate-700">
+                      VITE_GOOGLE_CLIENT_ID=your_client_id_here
+                    </div>
+                  </li>
+                  <li>
+                    Restart your frontend client server by running <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-slate-800">npm run dev</code>!
+                  </li>
+                </ol>
+                <div className="pt-1.5 border-t border-amber-150">
+                  <span className="font-bold text-slate-500">Current Status: </span>
+                  {isConfigured ? (
+                    <span className="text-emerald-600 font-bold">✓ Custom Client ID loaded from .env</span>
+                  ) : (
+                    <span className="text-red-500 font-bold">⚠️ Using fallback demo client ID (will block on unauthorized domains)</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ADVANCED DEVELOPER SANDBOX MODE ACCORDION */}
+          <div className="w-full border border-slate-200 rounded-2xl overflow-hidden transition-all duration-300">
             <button
               type="button"
               onClick={() => {
                 setShowSandbox(!showSandbox);
                 setError("");
               }}
-              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-[10px] font-black tracking-wider uppercase text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-xl transition duration-200"
+              className="w-full flex items-center justify-between py-3 px-4 text-left focus:outline-none hover:bg-slate-50 transition duration-150"
             >
-              <span>🛠️</span> {showSandbox ? "Hide Developer Sandbox" : "Show Developer Sandbox"}
+              <div className="flex items-center gap-2">
+                <span className="text-base">🛠️</span>
+                <span className="text-xs font-bold text-slate-600 tracking-wide uppercase">
+                  Developer Sandbox Fallback
+                </span>
+              </div>
+              <span className="text-xs font-bold text-slate-400">
+                {showSandbox ? "Hide" : "Expand"}
+              </span>
             </button>
 
             {showSandbox && (
-              <div className="mt-4 space-y-3 animate-fade-in text-left">
-                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-2 text-center">
-                  Mock profiles for local Sandbox sandbox testing
+              <div className="px-4 pb-4 pt-2 border-t border-slate-200/50 bg-slate-50/40 text-left space-y-3">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-center">
+                  Simulate complete Google login instantly offline
                 </p>
 
-                {mockAccounts.map((account, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSelectAccount(account)}
-                    className="w-full flex items-center p-2.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 text-left focus:outline-none"
-                  >
-                    <div className={`w-8 h-8 rounded-full ${account.bg} flex items-center justify-center text-white font-bold text-xs shadow-sm mr-2.5`}>
-                      {account.avatar}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-700 truncate">{account.name}</p>
-                      <p className="text-[10px] text-gray-400 truncate">{account.email}</p>
-                    </div>
-                  </button>
-                ))}
+                {/* Preconfigured Mock accounts */}
+                <div className="space-y-2">
+                  {mockAccounts.map((account, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSelectAccount(account)}
+                      className="w-full flex items-center p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-slate-350 hover:bg-slate-50 transition duration-150 text-left focus:outline-none shadow-sm"
+                    >
+                      <div className={`w-8 h-8 rounded-full ${account.bg} flex items-center justify-center text-white font-black text-xs mr-3 shadow-md`}>
+                        {account.avatar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-700 truncate">{account.name}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{account.email}</p>
+                      </div>
+                      <span className="text-[10px] font-black text-green-500 uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                        Inject
+                      </span>
+                    </button>
+                  ))}
+                </div>
 
-                {/* Custom Mock Sandbox Entry */}
-                <div className="border-t border-dashed border-gray-200 pt-3 mt-3">
-                  <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-2">
-                    Simulate Custom Test Profile
+                {/* Custom Sandbox simulation fields */}
+                <div className="border-t border-dashed border-slate-200 pt-3 mt-3">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+                    Simulate Custom Google Profile
                   </p>
                   <form onSubmit={handleCustomSubmit} className="space-y-2.5">
                     {error && <p className="text-red-500 text-[10px] text-center font-bold">{error}</p>}
                     <input
                       type="text"
-                      placeholder="Custom Profile Name"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                      placeholder="Custom Profile Name (e.g. Jane Smith)"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-1 focus:ring-green-400"
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
                     />
                     <input
                       type="email"
-                      placeholder="custom@example.com"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                      placeholder="custom@gmail.com"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-1 focus:ring-green-400"
                       value={customEmail}
                       onChange={(e) => setCustomEmail(e.target.value)}
                     />
                     <button
                       type="submit"
-                      className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition shadow"
+                      className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition shadow-md hover:shadow-lg transform active:scale-95 duration-100"
                     >
                       Inject Custom Profile
                     </button>
@@ -189,15 +283,17 @@ const GoogleAuthModal = ({ isOpen, onClose, onSelect }) => {
             )}
           </div>
 
-          {/* Close / Cancel Button */}
-          <div className="flex justify-center mt-5">
-            <button
-              onClick={onClose}
-              className="text-xs text-gray-400 hover:text-gray-600 font-medium tracking-wide focus:outline-none hover:underline"
-            >
-              Cancel & Close
-            </button>
-          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between rounded-b-[32px]">
+          <span className="text-[9px] text-slate-400 font-medium">QuickBite Secure Gateway</span>
+          <button
+            onClick={onClose}
+            className="text-xs text-slate-400 hover:text-slate-600 font-bold tracking-wide focus:outline-none hover:underline"
+          >
+            Cancel & Close
+          </button>
         </div>
       </div>
     </div>
