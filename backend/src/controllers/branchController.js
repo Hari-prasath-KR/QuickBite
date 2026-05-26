@@ -29,7 +29,7 @@ export const getBranchesByCatering = async (req, res) => {
 export const getBranchesByCateringPublic = async (req, res) => {
   try {
     const { cateringId } = req.params;
-    const branches = await Branch.find({ cateringId, status: 'Active' });
+    const branches = await Branch.find({ cateringId });
     return res.json(branches);
   } catch (err) {
     return res.status(500).json({ msg: "Server error", error: err.message });
@@ -46,3 +46,32 @@ export const deleteBranch = async (req, res) => {
     return res.status(500).json({ msg: "Server error", error: err.message });
   }
 };
+
+export const getBranchById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ msg: "Invalid branch ID" });
+    }
+    const branch = await Branch.findById(id);
+    if (!branch) return res.status(404).json({ msg: "Branch not found" });
+    return res.json(branch);
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const updateBranchStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!status || !['Active', 'Inactive'].includes(status)) {
+      return res.status(400).json({ msg: "Invalid or missing status" });
+    }
+    const branch = await Branch.findByIdAndUpdate(id, { status }, { new: true });
+    if (!branch) return res.status(404).json({ msg: "Branch not found" });
+    return res.json(branch);
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};

@@ -4,9 +4,15 @@ import Order from "../models/order.js";
 import mongoose from "mongoose";
 import Branch from "../models/branch.js";
 import bcrypt from "bcryptjs";
+import { BranchMenuItem } from "../models/menuItem.js";
 
-const calculateAnalytics = async (cateringId) => {
-  const orders = await Order.find({ cateringId: cateringId });
+
+const calculateAnalytics = async (cateringId, branchId) => {
+  const query = { cateringId };
+  if (branchId && branchId !== "all") {
+    query.branchId = new mongoose.Types.ObjectId(branchId);
+  }
+  const orders = await Order.find(query);
 
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -39,15 +45,18 @@ const calculateAnalytics = async (cateringId) => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 7);
 
- const branches = await Catering.findById(cateringId).populate("branches");
-  const branchesPie = branches.branches.map(branch => ({
+  const branches = await Branch.find({ cateringId });
+  
+  // Calculate branchesPie over all catering orders for consistency
+  const allOrders = await Order.find({ cateringId });
+  const branchesPie = branches.map(branch => ({
     name: branch.name,
-    revenue: orders
-      .filter(o => o.branch.toString() === branch._id.toString())
+    revenue: allOrders
+      .filter(o => o.branchId && o.branchId.toString() === branch._id.toString())
       .reduce((sum, o) => sum + o.total, 0),
   }));
 
-  return { revenue, topDishes, branches: branches.branches, branchesPie };
+  return { revenue, topDishes, branches, branchesPie };
 };
 
 export const getCateringAnalytics = async (req, res) => {
@@ -61,7 +70,8 @@ export const getCateringAnalytics = async (req, res) => {
       console.error("4. A catering company was NOT found for the ID:", adminUser.cateringId);
       return res.status(404).json({ error: "Catering company does not exist for the linked ID." });
     }
-    const analytics = await calculateAnalytics(catering._id);
+    const { branchId } = req.query;
+    const analytics = await calculateAnalytics(catering._id, branchId);
     res.json({ catering, analytics });
 
   } catch (err) {
@@ -92,6 +102,11 @@ export const deleteBranchById = async (req, res) => {
      if (!mongoose.Types.ObjectId.isValid(branchId)) {
       return res.status(400).json({ error: "Invalid branch ID" });
      }
+     
+     // 1. Delete all branch menu item stock assignments associated with this branch
+     await BranchMenuItem.deleteMany({ branchId });
+
+     // 2. Delete the branch itself
      const branch = await Branch.findByIdAndDelete(branchId);
      if (!branch) {
       return res.status(404).json({ error: "Branch not found" });
@@ -169,13 +184,17 @@ export const deleteStaff = async (req, res) => {
 export const updateStaff = async (req, res) => {
   try {
     const { name, email, branchId } = req.body;
+    // Cast empty strings or falsy values to null to avoid Mongoose ObjectId CastErrors
+    const sanitizedBranchId = (branchId === "" || !branchId) ? null : branchId;
+    
     const updatedStaff = await User.findByIdAndUpdate(
       req.params.id,
-      { name, email, branchId },
+      { name, email, branchId: sanitizedBranchId },
       { new: true }
     ).populate('branchId', 'name');
     res.json(updatedStaff);
   } catch (error) {
+    console.error("Failed to update staff:", error);
     res.status(500).json({ error: "Server Error" });
   }
 };
@@ -205,3 +224,43 @@ export const addStaff = async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 };
+
+export const getCateringOrders = async (req, res) => {
+  try {
+    const adminUser = await User.findById(req.user._id);
+    if (!adminUser || !adminUser.cateringId) {
+      return res.status(403).json({ error: "Unauthorized: Admin not linked to a catering company." });
+    }
+    const orders = await Order.find({ cateringId: adminUser.cateringId })
+      .populate("branchId", "name location status")
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    console.error("Error fetching catering orders:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+};
+
+export const getCateringInventory = async (req, res) => {
+  try {
+    const adminUser = await User.findById(req.user._id);
+    if (!adminUser || !adminUser.cateringId) {
+      return res.status(403).json({ error: "Unauthorized: Admin not linked to a catering company." });
+    }
+    
+    // Find physical branches for this catering
+    const branches = await Branch.find({ cateringId: adminUser.cateringId });
+    const branchIds = branches.map(b => b._id);
+    
+    // Find all branch menu items and populate item details
+    const inventory = await BranchMenuItem.find({ branchId: { $in: branchIds } })
+      .populate("menuItemId")
+      .populate("branchId", "name location status");
+      
+    res.json(inventory);
+  } catch (error) {
+    console.error("Error fetching catering inventory:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+};

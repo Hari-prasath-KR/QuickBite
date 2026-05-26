@@ -58,10 +58,16 @@ export const topDishes = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 5;
     const days = parseInt(req.query.period) || 30;
+    const { cateringId } = req.query;
     const start = new Date(); start.setDate(start.getDate() - days);
 
+    const match = { createdAt: { $gte: start }, "payment.paid": true };
+    if (cateringId && cateringId !== "all") {
+      match.cateringId = new mongoose.Types.ObjectId(cateringId);
+    }
+
     const agg = await Order.aggregate([
-      { $match: { createdAt: { $gte: start }, "payment.paid": true } },
+      { $match: match },
       { $unwind: "$items" },
       { $group: { _id: "$items.name", count: { $sum: "$items.quantity" }, revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } } } },
       { $sort: { count: -1 } },
@@ -303,5 +309,28 @@ export const getCateringAnalytics = async (req, res) => {
   } catch (err) {
     console.error("Error fetching catering analytics:", err);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getDashboardSummary = async (req, res) => {
+  try {
+    const now = new Date();
+    const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const [catererCount, branchCount, customerCount, ordersToday] = await Promise.all([
+      Catering.countDocuments({}),
+      Branch.countDocuments({}),
+      User.countDocuments({ role: "customer" }),
+      Order.countDocuments({ createdAt: { $gte: todayDate } })
+    ]);
+
+    return res.json({
+      catererCount,
+      branchCount,
+      customerCount,
+      ordersToday
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Server Error", error: error.message });
   }
 };

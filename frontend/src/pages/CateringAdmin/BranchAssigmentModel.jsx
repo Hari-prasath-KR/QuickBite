@@ -163,7 +163,7 @@ const BranchAssignmentModal = ({ isOpen, onClose, menuItem }) => {
                                         assignments.assignedBranches.map(assign => (
                                             <div key={assign._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                                                 <div>
-                                                    <p className="font-bold text-blue-800">{assign.branchId.name}</p>
+                                                    <p className="font-bold text-blue-800">{assign.branchId?.name || "Deleted Branch"}</p>
                                                     <div className="mt-1 grid grid-cols-2 gap-x-4 text-sm">
                                                         <span className="text-gray-500">Price:</span>
                                                         <span className="font-semibold text-gray-900">${assign.price.toFixed(2)}</span>

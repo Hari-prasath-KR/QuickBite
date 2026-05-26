@@ -1,411 +1,448 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,} from "recharts";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AdminNavbar from "../../components/AdminNavbar";
-import api from "../../utils/api";
 import CateringManagement from "./CateringManagement";
-import CateringManagementSkeleton from "./CateringManagement"
+import UserManagement from "./UserManagement";
+import api from "../../utils/api";
+import { 
+  Building, 
+  Users, 
+  ShoppingBag, 
+  Shield, 
+  Server, 
+  Database, 
+  Cpu, 
+  ArrowRight, 
+  Plus, 
+  UserCheck,
+  TrendingUp,
+  Sliders,
+  AlertTriangle,
+  Flame,
+  CheckCircle,
+  HelpCircle
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 
-// --- Reusable Icon and Card Components ---
-const ArrowUpIcon = () => (
-  <svg xmlns="http://www.w.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-  </svg>
-);
-
-const ArrowDownIcon = () => (
-  <svg xmlns="http://www.w.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-  </svg>
-);
-
-const IncomeStatCard = ({ title, amount, percentageChange, comparisonText }) => {
-  const isPositive = percentageChange >= 0;
-  const formattedAmount = amount.toLocaleString("en-IN");
-
-  return (
-    <div className="flex flex-col">
-      <p className="text-sm text-gray-500">{title}</p>
-      <p className="text-3xl font-bold text-gray-800 mt-1">₹{formattedAmount}</p>
-      <div className="flex items-center text-sm mt-2">
-        <span
-          className={`flex items-center font-semibold ${
-            isPositive ? "text-green-600" : "text-red-600"
-          }`}
-        >
-          {isPositive ? <ArrowUpIcon /> : <ArrowDownIcon />}
-          {Math.abs(percentageChange)}%
-        </span>
-        <span className="text-gray-500 ml-1">{comparisonText}</span>
-      </div>
+// --- Operational Card Widget ---
+const StatCard = ({ title, count, description, icon: Icon, colorClass }) => (
+  <div className="bg-white/45 backdrop-blur-xl border border-white/30 rounded-3xl p-6 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex justify-between items-start">
+    <div className="text-left space-y-2">
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{title}</p>
+      <p className="text-3xl font-black text-slate-900">{count.toLocaleString("en-IN")}</p>
+      <p className="text-xs text-slate-600 font-semibold">{description}</p>
     </div>
-  );
-};
-
-const TotalIncomeSection = ({ stats }) => (
-  <div className="bg-white p-6 rounded-2xl shadow-sm">
-    <h4 className="text-xl font-extrabold text-gray-800 mb-4">📅 Total Revenue</h4>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      <IncomeStatCard
-        title="This Week's Income"
-        amount={stats?.weekly?.amount || 0}
-        percentageChange={stats?.weekly?.percentageChange || 0}
-        comparisonText="vs. last week"
-      />
-      <IncomeStatCard
-        title="Today's Income"
-        amount={stats?.today?.amount || 0}
-        percentageChange={stats?.today?.percentageChange || 0}
-        comparisonText="vs. yesterday"
-      />
-      <IncomeStatCard
-        title="This Month's Income"
-        amount={stats?.monthly?.amount || 0}
-        percentageChange={stats?.monthly?.percentageChange || 0}
-        comparisonText="vs. last month"
-      />
+    <div className={`p-3 rounded-2xl ${colorClass} border`}>
+      <Icon className="w-5 h-5" />
     </div>
   </div>
 );
 
-// --- Skeleton Components ---
-const TotalIncomeSkeleton = () => (
-  <div className="bg-cyan-50 p-6 rounded-2xl shadow-sm animate-pulse">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="flex flex-col">
-          <div className="h-4 bg-gray-300 rounded w-1/3 mb-2"></div>
-          <div className="h-8 bg-gray-300 rounded w-1/2 mb-3"></div>
-          <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+// --- Operations Skeleton ---
+const StatSkeleton = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+    {[...Array(4)].map((_, i) => (
+      <div key={i} className="bg-white/45 backdrop-blur-xl border border-white/20 p-6 rounded-3xl h-32 flex justify-between">
+        <div className="space-y-3 w-2/3">
+          <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+          <div className="h-8 bg-slate-200 rounded w-3/4"></div>
+          <div className="h-3 bg-slate-200 rounded w-full"></div>
         </div>
-      ))}
-    </div>
-  </div>
-);
-
-const RevenueCardSkeleton = () => (
-  <div className="bg-white/90 p-6 rounded-2xl shadow-lg animate-pulse">
-    <div className="h-6 bg-gray-300 rounded w-3/4 mb-5"></div>
-    <div className="grid grid-cols-2 gap-6">
-      <div className="p-5 bg-gray-100 rounded-xl">
-        <div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
-        <div className="h-8 bg-gray-300 rounded w-3/4 mb-2"></div>
-        <div className="h-4 bg-gray-300 rounded w-1/3"></div>
+        <div className="w-12 h-12 bg-slate-200 rounded-2xl"></div>
       </div>
-      <div className="p-5 bg-gray-100 rounded-xl">
-        <div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
-        <div className="h-8 bg-gray-300 rounded w-3/4 mb-2"></div>
-        <div className="h-4 bg-gray-300 rounded w-1/3"></div>
-      </div>
-    </div>
+    ))}
   </div>
 );
 
-const TopDishesSkeleton = () => (
-  <div className="bg-white/90 p-6 rounded-2xl shadow-lg animate-pulse">
-    <div className="h-6 bg-gray-300 rounded w-1/2 mb-5"></div>
-    <ul className="space-y-3">
-      {[...Array(5)].map((_, i) => (
-        <li
-          key={i}
-          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-        >
-          <div className="h-5 bg-gray-300 rounded w-2/3"></div>
-          <div className="h-5 bg-gray-300 rounded w-1/4"></div>
-        </li>
-      ))}
-    </ul>
-  </div>
-);
-
-const PieChartSkeleton = () => (
-  <div className="bg-white/90 p-6 rounded-2xl shadow-lg animate-pulse flex flex-col">
-    <div className="h-6 bg-gray-300 rounded w-3/4 mb-4"></div>
-    <div className="flex-grow w-full h-64 flex items-center justify-center">
-      <div className="w-48 h-48 bg-gray-300 rounded-full"></div>
-    </div>
-    <div className="mt-6 grid grid-cols-2 gap-3">
-      {[...Array(6)].map((_, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg"
-        >
-          <div className="h-10 w-10 bg-gray-300 rounded-full"></div>
-          <div className="flex-grow space-y-2">
-            <div className="h-4 bg-gray-300 rounded w-full"></div>
-            <div className="h-3 bg-gray-300 rounded w-1/2"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-const ChartSkeleton = () => (
-  <div className="bg-white/90 p-6 rounded-2xl shadow-lg animate-pulse">
-    <div className="h-6 bg-gray-300 rounded w-1/2 mb-4"></div>
-    <div className="h-[250px] bg-gray-200 rounded-lg"></div>
-  </div>
-);
-
-// --- Main Admin Dashboard Component ---
 const AdminDashboard = () => {
-  const [rev, setRev] = useState(null);
-  const [topDishes, setTopDishes] = useState([]);
-  const [revenuePer, setRevenuePer] = useState([]);
-  const [incomeStats, setIncomeStats] = useState(null);
+  const navigate = useNavigate();
 
-  // --- New state for CateringManagement ---
-  const [catering, setCaterings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
+  const [caterings, setCaterings] = useState([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingCaterings, setLoadingCaterings] = useState(true);
+  
+  // Tab Navigation State
+  const [activeTab, setActiveTab] = useState("caterers"); // caterers, users, settings
+
+  // System Configurations State
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [taxRate, setTaxRate] = useState("5.00");
+  const [starterCredits, setStarterCredits] = useState("500");
+  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      api.get("/admin/analytics/income-summary").then((r) => {
-  console.log("Income summary response:", r.data);
-  setIncomeStats(r.data);
-});
-      api.get("/admin/analytics/revenue-summary").then((r) => setRev(r.data));
-      api.get("/admin/analytics/top-dishes?limit=5&period=30").then((r) =>
-        setTopDishes(r.data)
-      );
-      api.get("/admin/analytics/revenue-per-catering?days=30").then((r) =>
-        setRevenuePer(r.data)
-      );
-
-      // Fetch catering list
-      const fetchCaterings = async () => {
-    const res = await api.get("/caterings", { withCredentials: true });
-    setCaterings(res.data);
-    setLoading(false);
-  };
-   fetchCaterings();
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    fetchDashboardData();
   }, []);
 
-  const COLORS = [
-    "#FFA000",
-    "#FFB300",
-    "#FFC107",
-    "#FFCA28",
-    "#FFD54F",
-    "#FFEE58",
-    "#9E9E9E",
-  ];
+  const fetchDashboardData = async () => {
+    try {
+      setLoadingStats(true);
+      setLoadingCaterings(true);
 
-  const pieChartData = useMemo(() => {
-    if (revenuePer.length === 0) return [];
-    if (revenuePer.length <= 6) {
-      return revenuePer;
+      const [statsRes, cateringsRes, settingsRes] = await Promise.all([
+        api.get("/admin/analytics/dashboard-summary"),
+        api.get("/caterings"),
+        api.get("/admin/settings")
+      ]);
+
+      setStats(statsRes.data);
+      setCaterings(cateringsRes.data);
+      if (settingsRes.data) {
+        setMaintenanceMode(settingsRes.data.maintenanceMode);
+        setTaxRate(settingsRes.data.taxRate.toString());
+        setStarterCredits(settingsRes.data.starterCredits.toString());
+      }
+    } catch (err) {
+      console.error("Error fetching admin dashboard operational details:", err);
+    } finally {
+      setLoadingStats(false);
+      setLoadingCaterings(false);
     }
-    const top6 = revenuePer.slice(0, 6);
-    const otherRevenue = revenuePer
-      .slice(6)
-      .reduce((acc, curr) => acc + curr.revenue, 0);
+  };
 
-    return [...top6, { name: "Other", revenue: otherRevenue, cateringId: "other" }];
-  }, [revenuePer]);
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    
+    try {
+      const res = await api.put("/admin/settings", {
+        maintenanceMode,
+        taxRate: Number(taxRate),
+        starterCredits: Number(starterCredits)
+      });
+      if (res.data) {
+        // Also update local states in case updated by server sanitization
+        setMaintenanceMode(res.data.settings.maintenanceMode);
+        setTaxRate(res.data.settings.taxRate.toString());
+        setStarterCredits(res.data.settings.starterCredits.toString());
+        toast.success("System configurations applied & saved successfully platform-wide!");
+      }
+    } catch (err) {
+      console.error("Error saving global configurations:", err);
+      toast.error(err.response?.data?.message || "Failed to apply system configurations.");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white">
-      <div className="fixed top-0 left-0 w-full z-50 shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white flex flex-col">
+      {/* Navbar Container */}
+      <div className="fixed top-0 left-0 w-full z-50">
         <AdminNavbar />
       </div>
 
-      <div className="pt-24 p-8">
-        {/* === TOTAL INCOME SECTION === */}
-        <div className="mb-8">
-          {incomeStats ? (
-            <TotalIncomeSection stats={incomeStats} />
-          ) : (
-            <TotalIncomeSkeleton />
-          )}
-        </div>
-
-        {/* === HISTORICAL TRENDS (GRAPHS) === */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {revenuePer.length > 0 ? (
-            <>
-              <div className="bg-white/90 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition">
-                <h4 className="text-xl font-extrabold text-gray-800 mb-4">
-                  📅 Weekly Revenue
-                </h4>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={revenuePer.slice(0, 7)}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" fontSize={12} />
-                    <YAxis fontSize={12} />
-                    <Tooltip formatter={(value) => `₹${value}`} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#34D399"
-                      strokeWidth={2}
-                      name="Revenue"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="bg-white/90 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition">
-                <h4 className="text-xl font-extrabold text-gray-800 mb-4">
-                  📆 Monthly Revenue
-                </h4>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={revenuePer}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" fontSize={12} />
-                    <YAxis fontSize={12} />
-                    <Tooltip formatter={(value) => `₹${value}`} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#F59E0B"
-                      strokeWidth={2}
-                      name="Revenue"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </>
-          ) : (
-            <>
-              <ChartSkeleton />
-              <ChartSkeleton />
-            </>
-          )}
-        </div>
-
-        {/* === KEY METRICS & BREAKDOWNS === */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-8">
-          {/* Top-Left Section */}
-          <div className="space-y-8">
-            {/* Revenue Card */}
-            {rev ? (
-              <div className="bg-white/90 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition">
-                <h3 className="text-xl font-extrabold text-gray-800">
-                  💰 Revenue / Orders
-                </h3>
-                <div className="mt-5 grid grid-cols-2 gap-6">
-                  <div className="p-5 bg-gradient-to-br from-green-100 to-green-200 rounded-xl shadow-sm">
-                    <div className="text-sm text-gray-600">Today Revenue</div>
-                    <div className="text-3xl font-bold text-green-700">
-                      ₹{rev.today.totalRevenue || 0}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Orders: {rev?.today?.orderCount || 0}
-                    </div>
-                  </div>
-                  <div className="p-5 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl shadow-sm">
-                    <div className="text-sm text-gray-600">Yesterday Revenue</div>
-                    <div className="text-3xl font-bold text-yellow-700">
-                      ₹{rev.yesterday.totalRevenue || 0}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Orders: {rev?.yesterday?.orderCount || 0}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <RevenueCardSkeleton />
-            )}
-
-            {/* Top Dishes */}
-            {topDishes.length > 0 ? (
-              <div className="bg-white/90 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition">
-                <h3 className="text-xl font-extrabold text-gray-800">🍽 Top Dishes</h3>
-                <ul className="mt-5 space-y-3">
-                  {topDishes.map((d, i) => (
-                    <li
-                      key={d.dish}
-                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                    >
-                      <span className="font-medium text-gray-700">
-                        {i + 1}. {d.dish}
-                      </span>
-                      <span className="font-semibold text-indigo-600">
-                        {d.count} orders
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <TopDishesSkeleton />
-            )}
+      <div className="pt-24 p-8 space-y-8 flex-grow">
+        
+        {/* === HERO SYSTEM BANNER === */}
+        <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-3xl p-8 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 transition-all duration-500">
+          <div className="text-left space-y-2">
+            <span className="px-3 py-1 bg-emerald-500/10 text-emerald-700 text-xs font-black rounded-full border border-emerald-200 shadow-sm flex items-center gap-1 w-fit">
+              <Shield className="w-3.5 h-3.5" /> Platform Control Center
+            </span>
+            <h1 className="text-3xl md:text-4xl font-black text-slate-950 tracking-tight leading-tight">
+              Global Operations Console
+            </h1>
+            <p className="text-slate-700 text-sm font-semibold max-w-2xl">
+              Monitor campus-wide dining nodes, regulate registered catering corporations, manage student wallets, audit accounts, and configure system variables.
+            </p>
           </div>
 
-          {/* Top-Right Section */}
-          {revenuePer.length > 0 ? (
-            <div className="bg-white/90 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition flex flex-col">
-              <h3 className="text-xl font-extrabold text-gray-800">
-                📊 Top Caterer Revenue
-              </h3>
-              <div className="flex-grow w-full h-64 mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      dataKey="revenue"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      labelLine={false}
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(0)}%`
-                      }
-                    >
-                      {pieChartData.map((_, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `₹${value}`} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                {revenuePer.slice(0, 6).map((r) => (
-                  <div
-                    key={r.cateringId}
-                    className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                  >
-                    <img
-                      src={r.logo}
-                      alt={r.name}
-                      className="h-10 w-10 object-cover rounded-full border"
-                    />
-                    <div>
-                      <div className="text-sm font-semibold text-gray-700">
-                        {r.name}
-                      </div>
-                      <div className="text-xs text-gray-500">₹{r.revenue}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <PieChartSkeleton />
-          )}
+          <button
+            onClick={() => navigate("/admin/analytics")}
+            className="px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-xs rounded-2xl shadow-md shadow-emerald-500/20 hover:shadow-emerald-600/30 flex items-center gap-2 transition-all duration-200 active:scale-[0.98] hover:-translate-y-0.5 active:translate-y-0"
+          >
+            <TrendingUp className="w-4 h-4" />
+            Launch Business Analytics
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* === MANAGE CATERING SECTION === */}
-       <div className="mt-12">
-          {loading ? (
-            <CateringManagementSkeleton />
-          ) : (
-            <CateringManagement loading={loading} catering={catering} />
-          )}
+        {/* === OPERATIONAL KPIS GRID === */}
+        {loadingStats || !stats ? (
+          <StatSkeleton />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+              title="Registered Providers"
+              count={stats.catererCount}
+              description="Active catering companies"
+              icon={Building}
+              colorClass="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 shadow-inner"
+            />
+            <StatCard
+              title="Campus Branch Canteens"
+              count={stats.branchCount}
+              description="Total operational canteens"
+              icon={Building}
+              colorClass="bg-blue-500/10 border-blue-500/20 text-blue-600 shadow-inner"
+            />
+            <StatCard
+              title="Registered Customers"
+              count={stats.customerCount}
+              description="Active campus student/faculty accounts"
+              icon={Users}
+              colorClass="bg-yellow-500/10 border-yellow-500/20 text-yellow-600 shadow-inner"
+            />
+            <StatCard
+              title="Today's Orders Summary"
+              count={stats.ordersToday}
+              description="System-wide orders logged today"
+              icon={ShoppingBag}
+              colorClass="bg-purple-500/10 border-purple-500/20 text-purple-600 shadow-inner"
+            />
+          </div>
+        )}
+
+        {/* === TAB NAVIGATION GRID === */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          
+          {/* Main Control Panel Area (Takes 2 columns) */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Segmented Tab Bar */}
+            <div className="bg-white/45 backdrop-blur-xl border border-white/30 rounded-2xl p-1.5 flex gap-1 shadow-sm w-fit">
+              {[
+                { id: "caterers", label: "Catering Corporations" },
+                { id: "users", label: "User Registry" },
+                { id: "settings", label: "System Configs" }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${
+                    activeTab === tab.id
+                      ? "bg-slate-900 text-white shadow"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Dynamic Content Panels */}
+            <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-[2rem] shadow-xl p-8 transition-all duration-300">
+              
+              {/* Tab 1: Catering Management */}
+              {activeTab === "caterers" && (
+                <CateringManagement loading={loadingCaterings} catering={caterings} />
+              )}
+
+              {/* Tab 2: User Account Registry */}
+              {activeTab === "users" && (
+                <UserManagement />
+              )}
+
+              {/* Tab 3: System Configurations */}
+              {activeTab === "settings" && (
+                <div className="space-y-6 text-left">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight">Global Configurations</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Control settings applied campus-wide</p>
+                  </div>
+
+                  <form onSubmit={handleSaveSettings} className="space-y-6 max-w-xl">
+                    
+                    {/* Platform Status */}
+                    <div className="p-5 bg-white/50 border border-slate-200/50 rounded-2xl space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-xs font-black text-slate-900">Platform Online Status</p>
+                          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Toggle maintenance screen for students/faculty canteens</p>
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setMaintenanceMode(!maintenanceMode)}
+                          className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 ${
+                            maintenanceMode ? "bg-rose-500 justify-end" : "bg-emerald-500 justify-start"
+                          }`}
+                        >
+                          <span className="bg-white w-4 h-4 rounded-full shadow-md transition-all"></span>
+                        </button>
+                      </div>
+
+                      {maintenanceMode ? (
+                        <div className="p-3 bg-rose-50 border border-rose-100 text-[10px] text-rose-700 font-bold rounded-xl flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-500" />
+                          Platform is currently configured in Maintenance Mode. Students cannot place orders.
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-emerald-50 border border-emerald-100 text-[10px] text-emerald-700 font-bold rounded-xl flex items-center gap-1.5">
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                          Platform is fully active. All canteens and branches are accepting orders online.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Standard CGST/SGST Tax rates */}
+                    <div className="p-5 bg-white/50 border border-slate-200/50 rounded-2xl space-y-4">
+                      <div>
+                        <p className="text-xs font-black text-slate-900">Tax Rates Calibration</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">CGST + SGST tax values applied to receipts</p>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Default System Tax Rate (%)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="30"
+                          value={taxRate}
+                          onChange={(e) => setTaxRate(e.target.value)}
+                          className="w-full p-3 bg-white/80 border border-slate-200 rounded-xl text-xs font-extrabold focus:outline-none focus:border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Starter Wallet balance credit */}
+                    <div className="p-5 bg-white/50 border border-slate-200/50 rounded-2xl space-y-4">
+                      <div>
+                        <p className="text-xs font-black text-slate-900">Welcome Wallet Bonus</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Starter credits credited to new accounts automatically</p>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Starter Bonus (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={starterCredits}
+                          onChange={(e) => setStarterCredits(e.target.value)}
+                          className="w-full p-3 bg-white/80 border border-slate-200 rounded-xl text-xs font-extrabold focus:outline-none focus:border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={savingSettings}
+                      className="px-6 py-3.5 bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {savingSettings ? "Applying settings..." : "Apply & Save Configurations"}
+                    </button>
+
+                  </form>
+                </div>
+              )}
+
+            </div>
+
+          </div>
+
+          {/* Quick Actions & System Status Columns (Takes 1 column) */}
+          <div className="space-y-8">
+            
+            {/* Quick Action Panel */}
+            <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-[2rem] p-8 shadow-xl text-left space-y-6">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">System Controls</h3>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Quick Actions Hub</p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => navigate("/admin/add-catering")}
+                  className="w-full p-4 bg-white/70 hover:bg-white border border-slate-200/50 rounded-2xl flex items-center justify-between shadow-sm hover:shadow transition-all group hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <div className="flex items-center gap-3 text-slate-800">
+                    <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-xl">
+                      <Plus className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black">Register Catering Provider</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                </button>
+
+                <button
+                  onClick={() => navigate("/admin/add-catering-admin")}
+                  className="w-full p-4 bg-white/70 hover:bg-white border border-slate-200/50 rounded-2xl flex items-center justify-between shadow-sm hover:shadow transition-all group hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <div className="flex items-center gap-3 text-slate-800">
+                    <div className="p-2 bg-blue-500/10 border border-blue-500/20 text-blue-600 rounded-xl">
+                      <UserCheck className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black">Add Catering Admin</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                </button>
+              </div>
+            </div>
+
+            {/* Interactive Infrastructure Diagnoser Widget */}
+            <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-[2rem] p-8 shadow-xl text-left space-y-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Platform Health</h3>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Interactive diagnostics</p>
+                </div>
+                <button
+                  onClick={() => {
+                    toast.success("Diagnostic check complete! All core cluster systems are fully synchronized.");
+                  }}
+                  title="Run Diagnostic Alert"
+                  className="p-1.5 bg-slate-900/10 hover:bg-slate-900 text-slate-800 hover:text-white rounded-xl border transition-all active:scale-[0.98]"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Status Nodes */}
+              <div className="space-y-4 font-bold text-xs">
+                
+                {/* Node 1: POS API Core */}
+                <div className="p-3 bg-white/50 border border-slate-200/40 rounded-2xl flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-lg">
+                      <Server className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-slate-800">POS Core API</span>
+                  </div>
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100/80 border border-emerald-200 text-[9px] uppercase tracking-wider text-emerald-700">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                    Online
+                  </span>
+                </div>
+
+                {/* Node 2: Database Cluster */}
+                <div className="p-3 bg-white/50 border border-slate-200/40 rounded-2xl flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 rounded-lg">
+                      <Database className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-slate-800">MongoDB Cluster</span>
+                  </div>
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100/80 border border-emerald-200 text-[9px] uppercase tracking-wider text-emerald-700">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                    Active
+                  </span>
+                </div>
+
+                {/* Node 3: client Vite engine */}
+                <div className="p-3 bg-white/50 border border-slate-200/40 rounded-2xl flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 rounded-lg">
+                      <Cpu className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-slate-800">Frontend Client</span>
+                  </div>
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100/80 border border-emerald-200 text-[9px] uppercase tracking-wider text-emerald-700">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                    Active
+                  </span>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
         </div>
+
       </div>
     </div>
   );

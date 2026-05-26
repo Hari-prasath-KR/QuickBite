@@ -56,11 +56,14 @@ const recentOrdersRaw = await Order.find({
 
     const recentOrders = recentOrdersRaw.map(o => ({
       _id: o._id,
-      name: o.userId?.name || "Guest",
-      items: o.items, // already correct
+      name: o.customerName || o.userId?.name || "Guest",
+      items: o.items,
       status: o.status,
       total: o.total,
-      createdAt: o.createdAt
+      createdAt: o.createdAt,
+      payment: o.payment,
+      table: o.table,
+      customerName: o.customerName || o.userId?.name || "Guest"
     }));
 
     // -----------------------------------------
@@ -76,13 +79,23 @@ const recentOrdersRaw = await Order.find({
           totalQty: { $sum: "$items.quantity" }
         }
       },
+      {
+        $lookup: {
+          from: "menuitems",
+          localField: "_id",
+          foreignField: "_id",
+          as: "menuItemInfo"
+        }
+      },
+      { $unwind: { path: "$menuItemInfo", preserveNullAndEmptyArrays: true } },
       { $sort: { totalQty: -1 } },
       { $limit: 6 },
       {
         $project: {
           _id: 0,
           name: 1,
-          orders: "$totalQty"
+          orders: "$totalQty",
+          imageUrl: "$menuItemInfo.imageUrl"
         }
       }
     ]);

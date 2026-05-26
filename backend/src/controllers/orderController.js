@@ -1,9 +1,16 @@
 import Order from "../models/order.js";
+import Branch from "../models/branch.js";
+import User from "../models/user.js";
+import SystemSetting from "../models/systemSetting.js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+
 import dotenv from "dotenv";
 
 dotenv.config();
+
+// Helper to get a fresh Razorpay instance dynamically
+import { BranchMenuItem } from "../models/menuItem.js";
 
 // Helper to get a fresh Razorpay instance dynamically
 const getRazorpayInstance = () => {
@@ -13,30 +20,132 @@ const getRazorpayInstance = () => {
   });
 };
 
+// Helper to validate and deduct menu item stock for a branch
+const validateAndDeductStock = async (branchId, items) => {
+  if (!branchId || !items || items.length === 0) return { success: true };
+
+  // 1) Validate stock for all items
+  const assignments = [];
+  for (const item of items) {
+    const branchItem = await BranchMenuItem.findOne({
+      branchId,
+      menuItemId: item.itemId
+    });
+
+    if (!branchItem || !branchItem.isAvailable) {
+      return {
+        success: false,
+        message: `"${item.name}" is currently not available.`
+      };
+    }
+
+    if (branchItem.quantity < item.quantity) {
+      return {
+        success: false,
+        message: `Only ${branchItem.quantity} of "${item.name}" is available.`
+      };
+    }
+    assignments.push({ branchItem, quantityOrdered: item.quantity });
+  }
+
+  // 2) Deduct stock and save
+  for (const { branchItem, quantityOrdered } of assignments) {
+    branchItem.quantity = Math.max(0, branchItem.quantity - quantityOrdered);
+    await branchItem.save();
+  }
+
+  return { success: true };
+};
+
 
 // ➕ Add a new order (simple direct method)
 export const addOrder = async (req, res) => {
   try {
-    const { userId, cateringId, branchId, items, total, status, payment } = req.body;
-    if (!userId || !cateringId || !items || items.length === 0 || !total) {
-      return res.status(400).json({ message: "userId, cateringId, items[], and total are required" });
+    const { userId, cateringId, branchId, items, total, status, payment, table, customerName } = req.body;
+    if (!cateringId || !items || items.length === 0 || !total) {
+      return res.status(400).json({ message: "cateringId, items[], and total are required" });
     }
+
+    if (branchId) {
+      const branch = await Branch.findById(branchId);
+      if (branch && branch.status === "Inactive") {
+        return res.status(400).json({ message: "This branch is currently offline or under maintenance break and is not accepting online orders." });
+      }
+    }
+
+    // Verify and deduct stock for each item in the order
+    if (branchId) {
+      const stockResult = await validateAndDeductStock(branchId, items);
+      if (!stockResult.success) {
+        return res.status(400).json({ message: stockResult.message });
+      }
+    }
+    
+    // Handle secure wallet checkout deduction
+    let finalPaymentPaid = payment?.paid || false;
+    if (payment?.method === "Wallet") {
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required for wallet payments." });
+      }
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found." });
+      }
+
+      // Fetch global configuration settings for GST/Tax Rate
+      const settings = await SystemSetting.findOne({ key: "global_config" });
+      const taxRate = settings ? settings.taxRate : 5.0;
+      const taxMultiplier = 1 + (taxRate / 100);
+      const grandTotal = total * taxMultiplier;
+
+      if ((user.walletBalance || 0) < grandTotal) {
+        return res.status(400).json({ message: "Insufficient wallet balance." });
+      }
+      // Deduct balance securely
+      user.walletBalance = Number((user.walletBalance - grandTotal).toFixed(2));
+      await user.save();
+      finalPaymentPaid = true;
+
+    }
+
+    // We create the order first to get its _id, so we can generate a valid, unique token number
     const newOrder = new Order({
-      userId,
+      userId: userId || null,
       cateringId,
       branchId: branchId || null,
       items,
       total,
       status: status || "pending",
+      table: table || "",
+      customerName: customerName || "",
       payment: {
-        method: "Online", // force online
+        method: payment?.method || "Online",
         razorpayOrderId: payment?.razorpayOrderId || null,
         razorpayPaymentId: payment?.razorpayPaymentId || null,
-        paid: payment?.paid || false,
+        paid: finalPaymentPaid,
       }
     });
+
+    // Always generate the token number based on the order ID to support unpaid Cash/PayLater slips
+    newOrder.tokenNumber = `TK-${newOrder._id.toString().slice(-4).toUpperCase()}`;
+
     const savedOrder = await newOrder.save();
-    res.status(201).json(savedOrder);
+    
+    // Populate details just in case
+    const populated = await Order.findById(savedOrder._id)
+      .populate("userId", "name email")
+      .populate("items.itemId", "name price");
+
+    // Emit event via socket.io for real-time dashboard updates!
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("orderCreated", {
+        orderId: savedOrder._id.toString(),
+        branchId: savedOrder.branchId?.toString()
+      });
+    }
+
+    res.status(201).json(populated || savedOrder);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -96,6 +205,21 @@ export const verifyRazorpayPayment = async (req, res) => {
       return res.status(400).json({ message: "Required fields missing" });
     }
 
+    if (branchId) {
+      const branch = await Branch.findById(branchId);
+      if (branch && branch.status === "Inactive") {
+        return res.status(400).json({ message: "This branch is currently offline or under maintenance break and is not accepting online orders." });
+      }
+    }
+
+    // Verify and deduct stock for each item in the order
+    if (branchId) {
+      const stockResult = await validateAndDeductStock(branchId, items);
+      if (!stockResult.success) {
+        return res.status(400).json({ message: stockResult.message });
+      }
+    }
+
     const isMock = razorpay_order_id && (razorpay_order_id.startsWith("order_mock_") || razorpay_signature === "mock_signature_approved");
     let isVerified = false;
 
@@ -128,6 +252,8 @@ export const verifyRazorpayPayment = async (req, res) => {
         paid: true,
       }
     });
+
+    newOrder.tokenNumber = `TK-${newOrder._id.toString().slice(-4).toUpperCase()}`;
 
     const savedOrder = await newOrder.save();
 
@@ -202,26 +328,48 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    const updatedOrder = await Order.findByIdAndUpdate(
-      orderId,
-      { status },
-      { new: true }
-    ).populate("userId", "name");
-
-    if (!updatedOrder) {
+    const order = await Order.findById(orderId);
+    if (!order) {
       return res.status(404).json({ msg: "Order not found" });
     }
 
+    const oldStatus = order.status;
+    const isCancelled = String(status).toLowerCase() === "cancelled" || String(status).toLowerCase() === "canceled";
+    const wasAlreadyCancelled = String(oldStatus).toLowerCase() === "cancelled" || String(oldStatus).toLowerCase() === "canceled";
+
+    order.status = status;
+
+    // Refund 150% to user wallet if the order is cancelled, paid, and was not already cancelled
+    if (isCancelled && !wasAlreadyCancelled && order.payment?.paid && order.userId) {
+      const settings = await SystemSetting.findOne({ key: "global_config" });
+      const taxRate = settings ? settings.taxRate : 5.0;
+      const taxMultiplier = 1 + (taxRate / 100);
+
+      const refundAmount = Number((order.total * taxMultiplier * 1.50).toFixed(2));
+      const user = await User.findById(order.userId);
+      if (user) {
+        user.walletBalance = Number(((user.walletBalance || 0) + refundAmount).toFixed(2));
+        await user.save();
+        console.log(`[Wallet Refund] Credited 150% refund (${refundAmount}) to user ${user._id} for cancelled order ${order._id}`);
+      }
+    }
+
+
+    const savedOrder = await order.save();
+    const populated = await Order.findById(savedOrder._id).populate("userId", "name");
+
     const io = req.app.get("io");
-    io.emit("orderUpdated", {
-      orderId: updatedOrder._id.toString(),
-      status: updatedOrder.status,
-      branchId: updatedOrder.branchId.toString()
-    });
+    if (io) {
+      io.emit("orderUpdated", {
+        orderId: savedOrder._id.toString(),
+        status: savedOrder.status,
+        branchId: savedOrder.branchId?.toString()
+      });
+    }
 
     res.json({
       msg: "Status updated successfully",
-      order: updatedOrder
+      order: populated || savedOrder
     });
 
   } catch (err) {
@@ -229,4 +377,178 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ msg: "Server error", error: err.message });
   }
 };
+
+export const getBranchOrdersToday = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+    const { date } = req.query;
+
+    let start, end;
+    if (date) {
+      start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start = new Date();
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setHours(23, 59, 59, 999);
+    }
+
+    const orders = await Order.find({
+      branchId,
+      createdAt: { $gte: start, $lte: end }
+    })
+      .populate("userId", "name email")
+      .populate("items.itemId", "name price")
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (error) {
+    console.error("getBranchOrdersToday error:", error);
+    res.status(500).json({ message: "Failed to fetch today's orders", error: error.message });
+  }
+};
+
+// 💳 Mark Cash Payment as Successful and Generate Token
+export const markPaymentSuccess = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { method, razorpayOrderId, razorpayPaymentId } = req.body || {};
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    order.payment.paid = true;
+    if (method) {
+      order.payment.method = method;
+    }
+    if (razorpayOrderId) {
+      order.payment.razorpayOrderId = razorpayOrderId;
+    }
+    if (razorpayPaymentId) {
+      order.payment.razorpayPaymentId = razorpayPaymentId;
+    }
+    order.tokenNumber = `TK-${order._id.toString().slice(-4).toUpperCase()}`;
+    const saved = await order.save();
+
+    const populated = await Order.findById(saved._id)
+      .populate("userId", "name email")
+      .populate("items.itemId", "name price");
+
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("orderUpdated", {
+        orderId: saved._id.toString(),
+        status: saved.status,
+        branchId: saved.branchId?.toString(),
+        paymentPaid: true,
+        tokenNumber: saved.tokenNumber,
+        paymentMethod: saved.payment?.method
+      });
+    }
+
+    res.json(populated || saved);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ❌ Customer Order Cancellation with dynamic status-based penalty/refund rules
+export const cancelOrderCustomer = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user._id;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Security check: Must own the order
+    if (order.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized to cancel this order" });
+    }
+
+    const currentStatus = order.status; // pending, preparing, ready, completed, cancelled
+    const normalizedStatus = String(currentStatus).toLowerCase();
+    
+    // Check if already completed or cancelled
+    if (normalizedStatus === "completed" || normalizedStatus === "cancelled" || normalizedStatus === "delivered") {
+      return res.status(400).json({ message: `Cannot cancel an order that is already ${currentStatus}` });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const orderTotal = order.total;
+    let penalty = 0;
+    let refund = 0;
+    let chargeDetail = "";
+
+    // Case 1: Paid (Online or Wallet Pre-payment)
+    if (order.payment?.paid) {
+      if (normalizedStatus === "pending") {
+        refund = orderTotal;
+        chargeDetail = "100% Full Refund (Pending status)";
+      } else if (normalizedStatus === "preparing") {
+        refund = Number((orderTotal * 0.75).toFixed(2));
+        chargeDetail = "75% Partial Refund (Preparing status)";
+      } else if (normalizedStatus === "ready") {
+        refund = Number((orderTotal * 0.50).toFixed(2));
+        chargeDetail = "50% Partial Refund (Ready status)";
+      }
+
+      user.walletBalance = Number(((user.walletBalance || 0) + refund).toFixed(2));
+    } 
+    // Case 2: Unpaid (Cash at pickup option selected)
+    else {
+      if (normalizedStatus === "pending") {
+        penalty = 0;
+        chargeDetail = "0% Cancellation Penalty (Pending status)";
+      } else if (normalizedStatus === "preparing") {
+        penalty = Number((orderTotal * 0.25).toFixed(2));
+        chargeDetail = "25% Cancellation Penalty (Preparing status)";
+      } else if (normalizedStatus === "ready") {
+        penalty = Number((orderTotal * 0.50).toFixed(2));
+        chargeDetail = "50% Cancellation Penalty (Ready status)";
+      }
+
+      user.walletBalance = Number(((user.walletBalance || 0) - penalty).toFixed(2));
+    }
+
+    // Set order status to Cancelled
+    order.status = "Cancelled";
+    await order.save();
+    await user.save();
+
+    // Socket emission to synchronize POS screens in real time
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("orderUpdated", {
+        orderId: order._id.toString(),
+        status: "Cancelled",
+        branchId: order.branchId?.toString()
+      });
+    }
+
+    res.json({
+      message: "Order cancelled successfully",
+      refund,
+      penalty,
+      chargeDetail,
+      newWalletBalance: user.walletBalance,
+      order
+    });
+
+  } catch (err) {
+    console.error("Error cancelling order:", err);
+    res.status(500).json({ message: "Server error during cancellation", error: err.message });
+  }
+};
+
 

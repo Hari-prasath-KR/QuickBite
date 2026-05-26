@@ -57,7 +57,7 @@ const BottomNav = () => {
         <span className="text-xs">Menu</span>
       </NavLink>
       <NavLink
-        to="/staff/menu"
+        to="/staff/more"
         className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ""}`}
       >
         <CiCircleMore size={24} />

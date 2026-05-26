@@ -1,16 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../utils/api";
 
 
 const AdminNavbar = () => {
   const navigate = useNavigate();
 
-    const handleLogout =async () => {
-    const res = await api.post("/auth/logout",{} ,{ withCredentials: true });
-    console.log(res);
-    navigate("/home"); // redirect to home page
-  };
+
 
   return (
     <div className="navbar bg-green-400 shadow-lg">
@@ -33,13 +28,34 @@ const AdminNavbar = () => {
         </button>
         <ul
           tabIndex={0}
-          className="menu dropdown-content mt-3 p-2 shadow bg-white rounded-box w-52 text-black"
+          className="menu dropdown-content mt-3 p-2 shadow bg-white rounded-box w-52 text-black space-y-1 font-bold text-xs"
         >
-          <li><button onClick={handleLogout}
-          className="hover:bg-gray-200 rounded-2xl transition-colors">🚪 Logout</button></li>
-          <li><a  onClick={()=>navigate("/profile")}  className="hover:bg-gray-200 rounded-2xl transition-colors">Portfolio</a></li>
-          {/* 🔜 Add more options here later */}
+          <li>
+            <button 
+              onClick={() => navigate("/admin")}
+              className="hover:bg-slate-100 rounded-xl transition-colors py-2 flex items-center gap-2"
+            >
+              🏠 Operations Control
+            </button>
+          </li>
+          <li>
+            <button 
+              onClick={() => navigate("/admin/analytics")}
+              className="hover:bg-slate-100 rounded-xl transition-colors py-2 flex items-center gap-2"
+            >
+              📊 Business Intelligence
+            </button>
+          </li>
+          <li>
+            <button 
+              onClick={() => navigate("/profile")}  
+              className="hover:bg-slate-100 rounded-xl transition-colors py-2 flex items-center gap-2 text-slate-800"
+            >
+              👤 Portfolio
+            </button>
+          </li>
         </ul>
+
       </div>
 
       {/* Brand Name */}

@@ -21,6 +21,7 @@ import ProfilePage from "./components/ProfilePage";
 import OrderPage from "./pages/Staff/OrderPage";
 import MenuPage from "./pages/Staff/MenuPage";
 import StaffService from "./pages/Staff/StaffService";
+import MorePage from "./pages/Staff/MorePage";
 // import ManageMenu from "./pages/CateringAdmin/ManageMenu";
 // import ManageBranches from "./pages/CateringAdmin/ManageBranches";
 // import ManageStaff from "./pages/CateringAdmin/ManageStaff";
@@ -56,6 +57,7 @@ const App = () => {
         <Route path="/staff/order" element={<OrderPage />} />
         <Route path="/staff/menu" element={<MenuPage />} />
         <Route path="/staff/service" element={<StaffService />} />
+        <Route path="/staff/more" element={<MorePage />} />
       </Routes>
     </>
   );

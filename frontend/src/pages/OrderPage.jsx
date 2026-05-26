@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import CustomerNavbar from "../components/CustomerNavbar";
+import toast from "react-hot-toast";
 
 // Floating Cart Icon/Summary Component for Mobile
 const CartSummary = ({ cart, totalPrice }) => {
@@ -43,9 +44,11 @@ const OrderPage = () => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [isCartVisible, setIsCartVisible] = useState(false); // Mobile drawer visibility
   const [category, setCategory] = useState("All");
+  const [branchDetail, setBranchDetail] = useState(null);
   
   // User profile cached for checkout details
   const [userProfile, setUserProfile] = useState(null);
+  const [taxRate, setTaxRate] = useState(5.0);
 
   // Payment flow states
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -53,7 +56,8 @@ const OrderPage = () => {
   const [receiptData, setReceiptData] = useState(null); // Backend-returned order details
   const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
   const [mockPaymentData, setMockPaymentData] = useState(null);
-  const [forceSandbox, setForceSandbox] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("Online");
+  const [onlineSubMethod, setOnlineSubMethod] = useState("Razorpay"); // "Razorpay" or "Wallet"
 
   // Load menu items on mount
   useEffect(() => {
@@ -68,6 +72,15 @@ const OrderPage = () => {
       }
     };
 
+    const fetchBranchDetail = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5001/api/branch/detail/${branchId}`);
+        setBranchDetail(res.data);
+      } catch (err) {
+        console.error("Error fetching branch details:", err);
+      }
+    };
+
     const fetchUserProfile = async () => {
       try {
         const res = await axios.get("http://localhost:5001/api/auth/profile", { withCredentials: true });
@@ -77,9 +90,23 @@ const OrderPage = () => {
       }
     };
 
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get("http://localhost:5001/api/admin/settings", { withCredentials: true });
+        if (res.data) {
+          setTaxRate(res.data.taxRate);
+        }
+      } catch (e) {
+        console.log("Error loading dynamic settings:", e);
+      }
+    };
+
     fetchMenu();
+    fetchBranchDetail();
     fetchUserProfile();
+    fetchSettings();
   }, [branchId]);
+
 
   // Unique categories for filtering
   const uniqueCategories = useMemo(() => {
@@ -129,6 +156,11 @@ const OrderPage = () => {
 
   // Checkout and Order Placement
   const handlePlaceOrder = async () => {
+    if (branchDetail?.status === "Inactive") {
+      toast.error("This branch is currently under maintenance or offline and is not accepting online orders.");
+      return;
+    }
+
     const items = Object.entries(cart).map(([itemId, quantity]) => {
       const menuItem = menuItems.find((m) => m.menuItemId?._id === itemId);
       return {
@@ -140,7 +172,7 @@ const OrderPage = () => {
     });
 
     if (items.length === 0) {
-      alert("Your cart is empty!");
+      toast.error("Your cart is empty!");
       return;
     }
 
@@ -155,7 +187,7 @@ const OrderPage = () => {
           userId = userRes.data.data._id;
           setUserProfile(userRes.data.data);
         } catch (e) {
-          alert("Please login to place an order.");
+          toast.error("Please login to place an order.");
           navigate("/login");
           return;
         }
@@ -164,11 +196,100 @@ const OrderPage = () => {
       // 2. Initialize Order through backend (creates a Razorpay Order ID for Grand Total including 5% GST)
       const firstValidItem = menuItems.find(m => m.menuItemId?.cateringId);
       const cateringId = firstValidItem ? firstValidItem.menuItemId.cateringId : null;
-      const grandTotalPaise = Math.round(totalPrice * 1.05 * 100);
+
+      // Handle Wallet checkout bypass
+      if (paymentMethod === "Online" && onlineSubMethod === "Wallet") {
+        try {
+          const grandTotal = totalPrice * (1 + taxRate / 100);
+          if ((userProfile?.walletBalance || 0) < grandTotal) {
+            toast.error("Insufficient wallet balance.");
+            setCheckoutLoading(false);
+            return;
+          }
+
+          const directRes = await axios.post("http://localhost:5001/api/order/", {
+            userId,
+            cateringId: cateringId || "68bfee102f3982de6e57bcd2",
+            branchId,
+            items,
+            total: totalPrice,
+            payment: {
+              method: "Wallet",
+              razorpayOrderId: null,
+              razorpayPaymentId: null,
+              paid: true
+            }
+          });
+
+          // Show Receipt Modal
+          setReceiptData(directRes.data);
+          setShowReceipt(true);
+          
+          // Clear Cart
+          setCart({});
+          setTotalPrice(0);
+          setIsCartVisible(false);
+          toast.success("Order paid and placed successfully using Wallet!");
+          
+          // Update local profile state to reflect subtracted wallet balance
+          setUserProfile(prev => prev ? {
+            ...prev,
+            walletBalance: Number((prev.walletBalance - grandTotal).toFixed(2))
+          } : null);
+        } catch (err) {
+          console.error("Failed to place Wallet order:", err);
+          toast.error(err.response?.data?.message || "Failed to place order using Wallet. Please try again.");
+        } finally {
+          setCheckoutLoading(false);
+        }
+        return;
+      }
+
+      // Handle PayLater checkout bypass
+      if (paymentMethod === "PayLater") {
+        try {
+          const directRes = await axios.post("http://localhost:5001/api/order/", {
+            userId,
+            cateringId: cateringId || "68bfee102f3982de6e57bcd2",
+            branchId,
+            items,
+            total: totalPrice,
+            payment: {
+              method: "PayLater",
+              razorpayOrderId: null,
+              razorpayPaymentId: null,
+              paid: false
+            }
+          });
+
+          // Show Receipt Modal
+          setReceiptData(directRes.data);
+          setShowReceipt(true);
+          
+          // Clear Cart
+          setCart({});
+          setTotalPrice(0);
+          setIsCartVisible(false);
+          toast.success("Order placed successfully with PayLater!");
+        } catch (err) {
+          console.error("Failed to place PayLater order:", err);
+          toast.error(err.response?.data?.message || "Failed to place order. Please try again.");
+        } finally {
+          setCheckoutLoading(false);
+        }
+        return;
+      }
+
+      const grandTotalPaise = Math.round(totalPrice * (1 + taxRate / 100) * 100);
       
       let razorpayOrder;
-      if (forceSandbox) {
-        console.warn("⚡ Developer forced Sandbox Mock Mode checkout.");
+      try {
+        const orderCreateRes = await axios.post("http://localhost:5001/api/order/razorpay-order", {
+          amount: grandTotalPaise,
+        });
+        razorpayOrder = orderCreateRes.data;
+      } catch (err) {
+        console.warn("⚠️ Backend failed to initialize online payment order, falling back to client-side mock:", err);
         razorpayOrder = {
           id: `order_mock_${Date.now()}`,
           amount: grandTotalPaise,
@@ -177,23 +298,6 @@ const OrderPage = () => {
           key_id: "rzp_test_placeholder_key",
           isMock: true
         };
-      } else {
-        try {
-          const orderCreateRes = await axios.post("http://localhost:5001/api/order/razorpay-order", {
-            amount: grandTotalPaise,
-          });
-          razorpayOrder = orderCreateRes.data;
-        } catch (err) {
-          console.warn("⚠️ Backend failed to initialize online payment order, falling back to client-side mock:", err);
-          razorpayOrder = {
-            id: `order_mock_${Date.now()}`,
-            amount: grandTotalPaise,
-            currency: "INR",
-            receipt: `receipt_${Date.now()}`,
-            key_id: "rzp_test_placeholder_key",
-            isMock: true
-          };
-        }
       }
 
       // 3. Open original Razorpay checkout popup
@@ -256,7 +360,7 @@ const OrderPage = () => {
                 console.error("Direct order fallback failed:", directErr);
               }
             }
-            alert("Payment verification failed. Please try again.");
+            toast.error(directErr.response?.data?.message || "Payment verification failed. Please try again.");
           }
         },
         prefill: {
@@ -297,7 +401,7 @@ const OrderPage = () => {
       console.error("Error initiating payment:", err);
       // Extremely robust fallback: if absolutely anything fails in checkout initialization, open the mock gateway!
       console.warn("⚠️ Checkout exception caught. Falling back to local mock payment gateway.");
-      const grandTotalPaise = Math.round(totalPrice * 1.05 * 100);
+      const grandTotalPaise = Math.round(totalPrice * (1 + taxRate / 100) * 100);
       const fallbackOrder = {
         id: `order_mock_${Date.now()}`,
         amount: grandTotalPaise,
@@ -339,7 +443,7 @@ const OrderPage = () => {
             setIsCartVisible(false);
           } catch (verifyErr) {
             console.error("Direct fallback placement failed:", verifyErr);
-            alert("Payment failed to verify. Please try again.");
+            toast.error(verifyErr.response?.data?.message || "Payment failed to verify. Please try again.");
           }
         }
       };
@@ -354,7 +458,7 @@ const OrderPage = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-400 via-yellow-200 to-white">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mb-4"></div>
-        <p className="text-green-900 font-semibold text-lg animate-pulse">Loading Delicious Menu...</p>
+        <p className="text-green-900 font-semibold text-lg animate-pulse">Loading Menu...</p>
       </div>
     );
   }
@@ -367,11 +471,25 @@ const OrderPage = () => {
       </div>
 
       <div className="pt-28 px-4 md:px-8 pb-12 container mx-auto max-w-7xl">
+        {branchDetail?.status === "Inactive" && (
+          <div className="bg-rose-500/10 backdrop-blur-md border border-rose-500/30 text-rose-800 p-5 rounded-2xl shadow-xl flex items-center justify-between mb-8 animate-pulse">
+            <div className="flex items-center space-x-3.5">
+              <span className="text-2xl">🚨</span>
+              <div>
+                <h4 className="font-extrabold text-sm text-rose-900">Branch Under Maintenance Break</h4>
+                <p className="text-xs text-rose-700 mt-0.5 font-semibold">
+                  This branch is currently offline or under maintenance and is NOT accepting online orders. Ordering is temporarily disabled.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Menu Header with Category Selector */}
         <div className="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/50 flex flex-col sm:flex-row justify-between items-center gap-4 mb-10">
           <div>
             <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">Available Menu</h1>
-            <p className="text-slate-600 text-sm mt-1">Order food and pay easily using online Razorpay gateway.</p>
+            <p className="text-slate-600 text-sm mt-1">Select items and pay securely online.</p>
           </div>
           
           <div className="flex items-center space-x-4">
@@ -423,18 +541,32 @@ const OrderPage = () => {
                             {item.menuItemId.category}
                           </span>
                         )}
+                        {item.quantity === 0 && (
+                          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-2 text-center">
+                            <span className="bg-rose-600/90 text-white font-black text-xs px-3.5 py-1.5 rounded-full uppercase tracking-widest border border-rose-400/30 shadow-lg animate-pulse">
+                              Out of Stock
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <h3 className="text-xl font-bold text-slate-800">{item.menuItemId?.name}</h3>
                       <p className="text-slate-500 text-sm mt-1.5 line-clamp-2 h-10">
-                        {item.menuItemId?.description || "Delicious campus favorite dish prepared fresh."}
+                        {item.menuItemId?.description || "Freshly prepared campus meal."}
                       </p>
                     </div>
 
                     <div className="mt-6 flex items-center justify-between">
                       <span className="text-2xl font-black text-green-600">₹{item.price.toFixed(2)}</span>
 
-                      {cart[item.menuItemId._id] ? (
+                      {item.quantity === 0 ? (
+                        <button
+                          disabled
+                          className="px-5 py-2 bg-slate-100 border border-slate-200 text-slate-400 font-extrabold rounded-xl cursor-not-allowed text-xs uppercase tracking-wider"
+                        >
+                          Sold Out
+                        </button>
+                      ) : cart[item.menuItemId._id] ? (
                         <div className="flex items-center bg-green-100 rounded-xl px-2 py-1.5 border border-green-200">
                           <button
                             onClick={() => handleRemoveFromCart(item)}
@@ -447,7 +579,8 @@ const OrderPage = () => {
                           </span>
                           <button
                             onClick={() => handleAddToCart(item)}
-                            className="px-2 text-lg font-bold text-green-700 hover:bg-green-200 rounded-lg transition"
+                            className="px-2 text-lg font-bold text-green-700 hover:bg-green-200 rounded-lg transition disabled:opacity-40"
+                            disabled={cart[item.menuItemId._id] >= item.quantity}
                           >
                             +
                           </button>
@@ -483,9 +616,15 @@ const OrderPage = () => {
                     totalPrice={totalPrice} 
                     handlePlaceOrder={handlePlaceOrder}
                     checkoutLoading={checkoutLoading}
-                    forceSandbox={forceSandbox}
-                    setForceSandbox={setForceSandbox}
+                    branchDetail={branchDetail}
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
+                    onlineSubMethod={onlineSubMethod}
+                    setOnlineSubMethod={setOnlineSubMethod}
+                    userProfile={userProfile}
+                    taxRate={taxRate}
                   />
+
                 </div>
               </div>
             </div>
@@ -503,9 +642,15 @@ const OrderPage = () => {
         totalPrice={totalPrice}
         handlePlaceOrder={handlePlaceOrder}
         checkoutLoading={checkoutLoading}
-        forceSandbox={forceSandbox}
-        setForceSandbox={setForceSandbox}
+        branchDetail={branchDetail}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+        onlineSubMethod={onlineSubMethod}
+        setOnlineSubMethod={setOnlineSubMethod}
+        userProfile={userProfile}
+        taxRate={taxRate}
       />
+
 
       {/* 💳 HIGH-FIDELITY QUICKBITE PAYMENT SANDBOX FALLBACK MODAL */}
       {showMockPaymentModal && mockPaymentData && (
@@ -570,14 +715,14 @@ const OrderPage = () => {
                     });
                   } catch (err) {
                     console.error("Mock handler execution failed:", err);
-                    alert("Mock payment handler failed.");
+                    toast.error("Mock payment handler failed.");
                   } finally {
                     setCheckoutLoading(false);
                   }
                 }}
                 className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition duration-200 shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center space-x-2 text-base cursor-pointer"
               >
-                <span>🔒 Simulate Secure Payment</span>
+                <span>Simulate Payment</span>
               </button>
 
               <button
@@ -585,7 +730,7 @@ const OrderPage = () => {
                 onClick={() => {
                   setShowMockPaymentModal(false);
                   setCheckoutLoading(false);
-                  alert("Payment cancelled by customer.");
+                  toast.error("Payment cancelled by customer.");
                 }}
                 className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition duration-200 text-sm cursor-pointer"
               >
@@ -627,8 +772,20 @@ const OrderPage = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-extrabold rounded-full uppercase tracking-wider">
-                    PAID ONLINE
+                  <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${
+                    receiptData.payment?.method === "PayLater"
+                      ? "bg-amber-500/10 border border-amber-500/25 text-amber-700 animate-pulse"
+                      : "bg-emerald-500/10 border border-emerald-500/25 text-emerald-700"
+                  }`}>
+                    {receiptData.payment?.method === "PayLater" ? (
+                      "⏱ Pay Later at Pickup"
+                    ) : receiptData.payment?.method === "Cash" ? (
+                      "💵 Paid (Cash)"
+                    ) : receiptData.payment?.method === "Wallet" ? (
+                      "✓ Paid (Wallet)"
+                    ) : (
+                      "💳 Paid (Online)"
+                    )}
                   </span>
                   <p className="text-slate-400 text-xs font-mono mt-2">
                     {new Date(receiptData.createdAt).toLocaleDateString()} {new Date(receiptData.createdAt).toLocaleTimeString()}
@@ -643,12 +800,34 @@ const OrderPage = () => {
                   <p className="font-mono text-slate-800 font-bold mt-0.5">{receiptData._id}</p>
                 </div>
                 <div>
-                  <p className="text-slate-400 text-xs">Payment Reference:</p>
-                  <p className="font-mono text-slate-800 font-bold mt-0.5 text-ellipsis overflow-hidden">
-                    {receiptData.payment?.razorpayPaymentId || "N/A"}
+                  <p className="text-slate-400 text-xs">Payment Option:</p>
+                  <p className="font-bold text-slate-800 mt-0.5 text-ellipsis overflow-hidden">
+                    {receiptData.payment?.method === "PayLater" ? "PayLater (Cash/Counter)" : (receiptData.payment?.razorpayPaymentId || "Online Payment")}
                   </p>
                 </div>
               </div>
+
+              {/* Food Verification Token in Bill */}
+              {!receiptData.payment?.paid ? (
+                <div className="bg-amber-50 border border-amber-300 border-dashed rounded-xl p-4 text-center my-4">
+                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Food Verification Token</p>
+                  <p className="text-3xl font-black text-amber-800 mt-1 tracking-wider">
+                    {receiptData.tokenNumber || `TK-${receiptData._id.toString().slice(-4).toUpperCase()}`}
+                  </p>
+                  <p className="text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded mt-1.5 inline-block uppercase tracking-wider">
+                    ⚠️ Unpaid - Pay at counter pickup
+                  </p>
+                  <p className="text-xxs text-slate-500 mt-1.5 font-semibold">Please complete payment at the counter to claim your food.</p>
+                </div>
+              ) : (
+                <div className="bg-emerald-50 border border-emerald-200 border-dashed rounded-xl p-4 text-center my-4 animate-pulse">
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Food Verification Token</p>
+                  <p className="text-3xl font-black text-emerald-800 mt-1 tracking-wider">
+                    {receiptData.tokenNumber || `TK-${receiptData._id.toString().slice(-4).toUpperCase()}`}
+                  </p>
+                  <p className="text-xxs text-slate-500 mt-1 font-semibold">Show this token code at the counter to claim your food.</p>
+                </div>
+              )}
 
               {/* Items List Table */}
               <div>
@@ -668,24 +847,23 @@ const OrderPage = () => {
                 </div>
               </div>
 
-              {/* Price Calculations including 5% GST */}
+              {/* Dynamic GST tax breakdown */}
               <div className="border-t border-dashed pt-4 space-y-2">
                 <div className="flex justify-between text-sm text-slate-600">
                   <span>Subtotal</span>
                   <span>₹{receiptData.total.toFixed(2)}</span>
                 </div>
-                {/* 5% GST tax breakdown */}
                 <div className="flex justify-between text-xs text-slate-500">
-                  <span>CGST (2.5%)</span>
-                  <span>₹{(receiptData.total * 0.025).toFixed(2)}</span>
+                  <span>CGST ({(taxRate / 2).toFixed(1)}%)</span>
+                  <span>₹{(receiptData.total * (taxRate / 2 / 100)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-500 border-b pb-2 border-dashed">
-                  <span>SGST (2.5%)</span>
-                  <span>₹{(receiptData.total * 0.025).toFixed(2)}</span>
+                  <span>SGST ({(taxRate / 2).toFixed(1)}%)</span>
+                  <span>₹{(receiptData.total * (taxRate / 2 / 100)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xl font-extrabold text-slate-800 pt-2">
                   <span>Grand Total (Incl. GST)</span>
-                  <span className="text-green-700">₹{(receiptData.total * 1.05).toFixed(2)}</span>
+                  <span className="text-green-700">₹{(receiptData.total * (1 + taxRate / 100)).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -716,12 +894,26 @@ const OrderPage = () => {
 };
 
 // Helper component for Cart content
-const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLoading, forceSandbox, setForceSandbox }) => (
+const CartContent = ({ 
+  cart, 
+  menuItems, 
+  totalPrice, 
+  handlePlaceOrder, 
+  checkoutLoading, 
+  branchDetail,
+  paymentMethod,
+  setPaymentMethod,
+  onlineSubMethod,
+  setOnlineSubMethod,
+  userProfile,
+  taxRate = 5.0
+}) => (
+
   <>
     {Object.keys(cart).length === 0 ? (
       <div className="text-center py-10 flex flex-col items-center">
         <span className="text-4xl text-slate-300 mb-2">🍽️</span>
-        <p className="text-slate-400 text-sm">Your cart is empty. Let's add some delicious foods!</p>
+        <p className="text-slate-400 text-sm">Your cart is empty.</p>
       </div>
     ) : (
       <>
@@ -755,44 +947,161 @@ const CartContent = ({ cart, menuItems, totalPrice, handlePlaceOrder, checkoutLo
             <span>₹{totalPrice.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-xs text-slate-500">
-            <span>GST (5%)</span>
-            <span>₹{(totalPrice * 0.05).toFixed(2)}</span>
+            <span>GST ({taxRate.toFixed(1)}%)</span>
+            <span>₹{(totalPrice * (taxRate / 100)).toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-lg font-black border-t border-slate-100 pt-3 text-slate-850">
             <span>Total Amount</span>
-            <span className="text-green-700">₹{(totalPrice * 1.05).toFixed(2)}</span>
+            <span className="text-green-700">₹{(totalPrice * (1 + taxRate / 100)).toFixed(2)}</span>
           </div>
         </div>
 
-        {/* Developer Sandbox Toggle */}
-        <div className="mt-4 p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-dashed border-slate-200 transition duration-200">
-          <label className="flex items-center space-x-3 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={forceSandbox}
-              onChange={(e) => setForceSandbox && setForceSandbox(e.target.checked)}
-              className="w-4 h-4 text-green-600 border-slate-300 rounded focus:ring-green-400 cursor-pointer"
-            />
-            <div className="flex flex-col">
-              <span className="text-xs font-black text-slate-700">Developer Sandbox Mode</span>
-              <span className="text-xxs text-slate-400">Force local checkout bypass for quick testing</span>
+        {/* 🛡️ Premium Selector for Payment Method */}
+        <div className="my-5 border-t border-slate-100 pt-4">
+          <h3 className="text-xs font-black text-slate-500 mb-3 uppercase tracking-wider flex items-center gap-1.5">
+            <span>🛡️</span> Select Payment Option
+          </h3>
+          <div className="space-y-2.5">
+            {/* Online Payment Card */}
+            <div
+              onClick={() => setPaymentMethod && setPaymentMethod("Online")}
+              className={`flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                paymentMethod === "Online"
+                  ? "border-emerald-500 bg-emerald-50/50 shadow-sm"
+                  : "border-slate-100 hover:border-slate-200 bg-slate-50/40"
+              }`}
+            >
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors duration-300 ${
+                paymentMethod === "Online" ? "border-emerald-500 bg-emerald-500" : "border-slate-350"
+              }`}>
+                {paymentMethod === "Online" && (
+                  <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                )}
+              </div>
+              <div className="flex-grow">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">💳</span>
+                  <span className="font-extrabold text-xs text-slate-850">Online Payment</span>
+                  <span className="bg-emerald-100 text-emerald-700 font-bold text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-widest scale-90 origin-left">
+                    Instant
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Secure checkout via Cards, UPI, NetBanking.
+                </p>
+
+                {/* Sub-Payment Wallet / Gateway Option (Disabled/Hidden on PayLater) */}
+                {paymentMethod === "Online" && (
+                  <div className="mt-3.5 space-y-2 border-t border-slate-250/20 pt-2.5 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-[9px] font-bold text-slate-450 uppercase tracking-widest mb-1.5">Select Settlement Method:</p>
+                    
+                    {/* Razorpay Option */}
+                    <div
+                      onClick={() => setOnlineSubMethod && setOnlineSubMethod("Razorpay")}
+                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition border text-xxs ${
+                        onlineSubMethod === "Razorpay"
+                          ? "bg-emerald-100/40 border-emerald-300 font-extrabold text-emerald-800"
+                          : "bg-white border-slate-200 hover:border-slate-300 text-slate-600"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        checked={onlineSubMethod === "Razorpay"}
+                        onChange={() => {}}
+                        className="w-3 h-3 text-emerald-500 focus:ring-emerald-400"
+                      />
+                      <span>UPI / Cards / NetBanking (Razorpay)</span>
+                    </div>
+                    
+                    {/* Wallet Option */}
+                    <div
+                      onClick={() => {
+                        const grandTotal = totalPrice * (1 + taxRate / 100);
+                        const hasSufficient = (userProfile?.walletBalance || 0) >= grandTotal;
+                        if (hasSufficient) {
+                          setOnlineSubMethod && setOnlineSubMethod("Wallet");
+                        } else {
+                          toast.error(`Insufficient wallet balance! You need ₹${grandTotal.toFixed(2)}.`);
+                        }
+                      }}
+                      className={`flex items-center justify-between gap-2 p-2 rounded-lg cursor-pointer transition border text-xxs ${
+                        onlineSubMethod === "Wallet"
+                          ? "bg-emerald-100/40 border-emerald-300 font-extrabold text-emerald-800"
+                          : "bg-white border-slate-200 hover:border-slate-300 text-slate-600"
+                      } ${(userProfile?.walletBalance || 0) < totalPrice * (1 + taxRate / 100) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={onlineSubMethod === "Wallet"}
+                          disabled={(userProfile?.walletBalance || 0) < totalPrice * (1 + taxRate / 100)}
+                          onChange={() => {}}
+                          className="w-3 h-3 text-emerald-500 focus:ring-emerald-400"
+                        />
+                        <span>Use QuickBite Campus Wallet</span>
+                      </div>
+                      <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
+                        ₹{(userProfile?.walletBalance || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </label>
+
+            {/* PayLater Card */}
+            <div
+              onClick={() => setPaymentMethod && setPaymentMethod("PayLater")}
+              className={`flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                paymentMethod === "PayLater"
+                  ? "border-amber-500 bg-amber-50/30 shadow-sm"
+                  : "border-slate-100 hover:border-slate-200 bg-slate-50/40"
+              }`}
+            >
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors duration-300 ${
+                paymentMethod === "PayLater" ? "border-amber-500 bg-amber-500" : "border-slate-350"
+              }`}>
+                {paymentMethod === "PayLater" && (
+                  <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                )}
+              </div>
+              <div className="flex-grow">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">⏱️</span>
+                  <span className="font-extrabold text-xs text-slate-850">Pay Later at Pickup</span>
+                  <span className="bg-amber-100 text-amber-800 font-bold text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-widest scale-90 origin-left animate-pulse">
+                    Skip Queue
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Pay with Cash, UPI, or Card at the food counter.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <button
           onClick={handlePlaceOrder}
-          disabled={checkoutLoading}
-          className="w-full mt-5 bg-green-500 text-white font-extrabold py-3.5 rounded-xl hover:bg-green-600 active:scale-98 hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center text-base cursor-pointer"
+          disabled={checkoutLoading || branchDetail?.status === "Inactive"}
+          className="w-full mt-2 bg-green-500 text-white font-extrabold py-3.5 rounded-xl hover:bg-green-600 active:scale-98 hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center text-base cursor-pointer"
         >
-          {checkoutLoading ? (
+          {branchDetail?.status === "Inactive" ? (
+            <>
+              🔒 Offline / Under Maintenance
+            </>
+          ) : checkoutLoading ? (
             <>
               <span className="animate-spin inline-block h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></span>
-              Securing Payment...
+              Processing Order...
             </>
           ) : (
             <>
-              <span>🔒</span> Pay & Place Order
+              {paymentMethod === "PayLater"
+                ? "⏱️ Place PayLater Order"
+                : onlineSubMethod === "Wallet"
+                ? "💼 Pay with Wallet & Place Order"
+                : "💳 Pay & Place Order"}
             </>
           )}
         </button>
