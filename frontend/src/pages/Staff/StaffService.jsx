@@ -38,10 +38,11 @@ const getStatusColor = (status) => {
 };
 
 // Simple Receipt Modal for viewing previous orders
-const ReceiptModal = ({ order, onClose }) => {
+const ReceiptModal = ({ order, onClose, taxRate = 5.0 }) => {
   const handlePrint = () => {
     window.print();
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn text-gray-800">
@@ -109,16 +110,17 @@ const ReceiptModal = ({ order, onClose }) => {
             <div className="space-y-1 pt-1 text-[10px] font-bold">
               <div className="flex justify-between font-medium text-slate-500">
                 <span>Subtotal:</span>
-                <span>₹{(order.total - (order.total * 0.05 / 1.05)).toFixed(2)}</span>
+                <span>₹{(order.total - (order.total * (taxRate / 100) / (1 + taxRate / 100))).toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-medium text-slate-500">
-                <span>GST (5%):</span>
-                <span>₹{(order.total * 0.05 / 1.05).toFixed(2)}</span>
+                <span>GST ({taxRate.toFixed(1)}%):</span>
+                <span>₹{(order.total * (taxRate / 100) / (1 + taxRate / 100)).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-xs font-black text-slate-900 pt-1.5 border-t border-slate-100">
                 <span>GRAND TOTAL:</span>
                 <span>₹{order.total.toFixed(2)}</span>
               </div>
+
             </div>
 
             <p className="text-[9px] text-center font-bold text-slate-400 tracking-wider pt-3">
@@ -166,6 +168,7 @@ function StaffService() {
   const [createdOrder, setCreatedOrder] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [taxRate, setTaxRate] = useState(5.0);
 
   useEffect(() => {
     fetchProfileAndData();
@@ -174,9 +177,18 @@ function StaffService() {
   const fetchProfileAndData = async () => {
     setLoading(true);
     try {
-      const userRes = await axios.get("http://localhost:5001/api/auth/profile", { withCredentials: true });
+      const [userRes, settingsRes] = await Promise.all([
+        axios.get("http://localhost:5001/api/auth/profile", { withCredentials: true }),
+        axios.get("http://localhost:5001/api/admin/settings", { withCredentials: true }).catch((e) => {
+          console.log("Ignored settings load error in StaffService:", e);
+          return { data: { taxRate: 5.0 } };
+        })
+      ]);
       const u = userRes.data.data || userRes.data;
       setUser(u);
+      if (settingsRes && settingsRes.data) {
+        setTaxRate(settingsRes.data.taxRate);
+      }
       
       if (u.branchId) {
         // Fetch branch menu
@@ -194,6 +206,7 @@ function StaffService() {
       setLoading(false);
     }
   };
+
 
   const refreshOrdersOnly = async () => {
     if (!user?.branchId) return;
@@ -268,7 +281,7 @@ function StaffService() {
     return sum + (price * qty);
   }, 0);
 
-  const gst = subtotal * 0.05; // 5% GST
+  const gst = subtotal * (taxRate / 100); // Dynamic GST
   const grandTotal = subtotal + gst;
 
   const handlePlaceOrder = async () => {
@@ -614,7 +627,7 @@ function StaffService() {
                               <span>₹{subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-xs font-semibold text-slate-500">
-                              <span>GST (5%):</span>
+                              <span>GST ({taxRate.toFixed(1)}%):</span>
                               <span>₹{gst.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-base font-black text-slate-800 pt-1 border-t border-slate-50">
@@ -832,11 +845,11 @@ function StaffService() {
                       <div className="space-y-1 pt-1 text-[10px] font-bold">
                         <div className="flex justify-between font-medium text-slate-500">
                           <span>Subtotal:</span>
-                          <span>₹{(createdOrder.total - (createdOrder.total * 0.05 / 1.05)).toFixed(2)}</span>
+                          <span>₹{(createdOrder.total - (createdOrder.total * (taxRate / 100) / (1 + taxRate / 100))).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between font-medium text-slate-500">
-                          <span>GST (5%):</span>
-                          <span>₹{(createdOrder.total * 0.05 / 1.05).toFixed(2)}</span>
+                          <span>GST ({taxRate.toFixed(1)}%):</span>
+                          <span>₹{(createdOrder.total * (taxRate / 100) / (1 + taxRate / 100)).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-xs font-black text-slate-900 pt-1.5 border-t border-slate-100">
                           <span>GRAND TOTAL:</span>
@@ -966,8 +979,10 @@ function StaffService() {
         <ReceiptModal
           order={selectedReceipt}
           onClose={() => setSelectedReceipt(null)}
+          taxRate={taxRate}
         />
       )}
+
     </div>
   );
 }

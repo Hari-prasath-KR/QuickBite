@@ -48,6 +48,7 @@ const OrderPage = () => {
   
   // User profile cached for checkout details
   const [userProfile, setUserProfile] = useState(null);
+  const [taxRate, setTaxRate] = useState(5.0);
 
   // Payment flow states
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -89,10 +90,23 @@ const OrderPage = () => {
       }
     };
 
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get("http://localhost:5001/api/admin/settings", { withCredentials: true });
+        if (res.data) {
+          setTaxRate(res.data.taxRate);
+        }
+      } catch (e) {
+        console.log("Error loading dynamic settings:", e);
+      }
+    };
+
     fetchMenu();
     fetchBranchDetail();
     fetchUserProfile();
+    fetchSettings();
   }, [branchId]);
+
 
   // Unique categories for filtering
   const uniqueCategories = useMemo(() => {
@@ -186,7 +200,7 @@ const OrderPage = () => {
       // Handle Wallet checkout bypass
       if (paymentMethod === "Online" && onlineSubMethod === "Wallet") {
         try {
-          const grandTotal = totalPrice * 1.05;
+          const grandTotal = totalPrice * (1 + taxRate / 100);
           if ((userProfile?.walletBalance || 0) < grandTotal) {
             toast.error("Insufficient wallet balance.");
             setCheckoutLoading(false);
@@ -266,7 +280,7 @@ const OrderPage = () => {
         return;
       }
 
-      const grandTotalPaise = Math.round(totalPrice * 1.05 * 100);
+      const grandTotalPaise = Math.round(totalPrice * (1 + taxRate / 100) * 100);
       
       let razorpayOrder;
       try {
@@ -387,7 +401,7 @@ const OrderPage = () => {
       console.error("Error initiating payment:", err);
       // Extremely robust fallback: if absolutely anything fails in checkout initialization, open the mock gateway!
       console.warn("⚠️ Checkout exception caught. Falling back to local mock payment gateway.");
-      const grandTotalPaise = Math.round(totalPrice * 1.05 * 100);
+      const grandTotalPaise = Math.round(totalPrice * (1 + taxRate / 100) * 100);
       const fallbackOrder = {
         id: `order_mock_${Date.now()}`,
         amount: grandTotalPaise,
@@ -829,24 +843,23 @@ const OrderPage = () => {
                 </div>
               </div>
 
-              {/* Price Calculations including 5% GST */}
+              {/* Dynamic GST tax breakdown */}
               <div className="border-t border-dashed pt-4 space-y-2">
                 <div className="flex justify-between text-sm text-slate-600">
                   <span>Subtotal</span>
                   <span>₹{receiptData.total.toFixed(2)}</span>
                 </div>
-                {/* 5% GST tax breakdown */}
                 <div className="flex justify-between text-xs text-slate-500">
-                  <span>CGST (2.5%)</span>
-                  <span>₹{(receiptData.total * 0.025).toFixed(2)}</span>
+                  <span>CGST ({(taxRate / 2).toFixed(1)}%)</span>
+                  <span>₹{(receiptData.total * (taxRate / 2 / 100)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-500 border-b pb-2 border-dashed">
-                  <span>SGST (2.5%)</span>
-                  <span>₹{(receiptData.total * 0.025).toFixed(2)}</span>
+                  <span>SGST ({(taxRate / 2).toFixed(1)}%)</span>
+                  <span>₹{(receiptData.total * (taxRate / 2 / 100)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xl font-extrabold text-slate-800 pt-2">
                   <span>Grand Total (Incl. GST)</span>
-                  <span className="text-green-700">₹{(receiptData.total * 1.05).toFixed(2)}</span>
+                  <span className="text-green-700">₹{(receiptData.total * (1 + taxRate / 100)).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -928,12 +941,12 @@ const CartContent = ({
             <span>₹{totalPrice.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-xs text-slate-500">
-            <span>GST (5%)</span>
-            <span>₹{(totalPrice * 0.05).toFixed(2)}</span>
+            <span>GST ({taxRate.toFixed(1)}%)</span>
+            <span>₹{(totalPrice * (taxRate / 100)).toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-lg font-black border-t border-slate-100 pt-3 text-slate-850">
             <span>Total Amount</span>
-            <span className="text-green-700">₹{(totalPrice * 1.05).toFixed(2)}</span>
+            <span className="text-green-700">₹{(totalPrice * (1 + taxRate / 100)).toFixed(2)}</span>
           </div>
         </div>
 
@@ -997,7 +1010,7 @@ const CartContent = ({
                     {/* Wallet Option */}
                     <div
                       onClick={() => {
-                        const grandTotal = totalPrice * 1.05;
+                        const grandTotal = totalPrice * (1 + taxRate / 100);
                         const hasSufficient = (userProfile?.walletBalance || 0) >= grandTotal;
                         if (hasSufficient) {
                           setOnlineSubMethod && setOnlineSubMethod("Wallet");
@@ -1009,13 +1022,13 @@ const CartContent = ({
                         onlineSubMethod === "Wallet"
                           ? "bg-emerald-100/40 border-emerald-300 font-extrabold text-emerald-800"
                           : "bg-white border-slate-200 hover:border-slate-300 text-slate-600"
-                      } ${(userProfile?.walletBalance || 0) < totalPrice * 1.05 ? "opacity-50 cursor-not-allowed" : ""}`}
+                      } ${(userProfile?.walletBalance || 0) < totalPrice * (1 + taxRate / 100) ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
                       <div className="flex items-center gap-2">
                         <input
                           type="radio"
                           checked={onlineSubMethod === "Wallet"}
-                          disabled={(userProfile?.walletBalance || 0) < totalPrice * 1.05}
+                          disabled={(userProfile?.walletBalance || 0) < totalPrice * (1 + taxRate / 100)}
                           onChange={() => {}}
                           className="w-3 h-3 text-emerald-500 focus:ring-emerald-400"
                         />

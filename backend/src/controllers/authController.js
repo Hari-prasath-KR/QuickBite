@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import Order from "../models/order.js";
 import Branch from "../models/branch.js";
 import Catering from "../models/catering.js";
+import SystemSetting from "../models/systemSetting.js";
+
 
 dotenv.config();
 //console.log("JWT_SECRET from env:", process.env.JWT_SECRET);
@@ -23,15 +25,22 @@ export const register = async (req, res) => {
 
     const hashedpass = await bcrypt.hash(password, 10);
     console.log("Hashed Password:", hashedpass);
+    
+    // Fetch global configuration for default starter wallet credit balance
+    const settings = await SystemSetting.findOne({ key: "global_config" });
+    const starterCredits = settings ? settings.starterCredits : 500;
+
     const user = new User({
       name,
       email,
       password: hashedpass,
       role: "customer",
+      walletBalance: starterCredits
     });
 
     await user.save();
     res.status(201).json({ message: "Customer Registered Successfully" });
+
   } catch (error) {
     console.error("🔥 Register error:", error);
     res
@@ -155,15 +164,20 @@ export const googleLogin = async (req, res) => {
       const randomPassword = Math.random().toString(36).slice(-12) + "A1!";
       const hashedpass = await bcrypt.hash(randomPassword, 10);
       
+      const settings = await SystemSetting.findOne({ key: "global_config" });
+      const starterCredits = settings ? settings.starterCredits : 500;
+
       user = new User({
         name: name || email.split("@")[0],
         email,
         password: hashedpass,
         role: "customer",
+        walletBalance: starterCredits
       });
 
       await user.save();
       console.log(`🆕 Google user auto-registered: ${email}`);
+
     }
 
     // Sign the standard JWT token

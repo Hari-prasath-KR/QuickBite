@@ -1,8 +1,10 @@
 import Order from "../models/order.js";
 import Branch from "../models/branch.js";
 import User from "../models/user.js";
+import SystemSetting from "../models/systemSetting.js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -89,7 +91,13 @@ export const addOrder = async (req, res) => {
       if (!user) {
         return res.status(404).json({ message: "User not found." });
       }
-      const grandTotal = total * 1.05; // grand total includes 5% GST
+
+      // Fetch global configuration settings for GST/Tax Rate
+      const settings = await SystemSetting.findOne({ key: "global_config" });
+      const taxRate = settings ? settings.taxRate : 5.0;
+      const taxMultiplier = 1 + (taxRate / 100);
+      const grandTotal = total * taxMultiplier;
+
       if ((user.walletBalance || 0) < grandTotal) {
         return res.status(400).json({ message: "Insufficient wallet balance." });
       }
@@ -97,6 +105,7 @@ export const addOrder = async (req, res) => {
       user.walletBalance = Number((user.walletBalance - grandTotal).toFixed(2));
       await user.save();
       finalPaymentPaid = true;
+
     }
 
     // We create the order first to get its _id, so we can generate a valid, unique token number
@@ -332,7 +341,11 @@ export const updateOrderStatus = async (req, res) => {
 
     // Refund 150% to user wallet if the order is cancelled, paid, and was not already cancelled
     if (isCancelled && !wasAlreadyCancelled && order.payment?.paid && order.userId) {
-      const refundAmount = Number((order.total * 1.05 * 1.50).toFixed(2));
+      const settings = await SystemSetting.findOne({ key: "global_config" });
+      const taxRate = settings ? settings.taxRate : 5.0;
+      const taxMultiplier = 1 + (taxRate / 100);
+
+      const refundAmount = Number((order.total * taxMultiplier * 1.50).toFixed(2));
       const user = await User.findById(order.userId);
       if (user) {
         user.walletBalance = Number(((user.walletBalance || 0) + refundAmount).toFixed(2));
@@ -340,6 +353,7 @@ export const updateOrderStatus = async (req, res) => {
         console.log(`[Wallet Refund] Credited 150% refund (${refundAmount}) to user ${user._id} for cancelled order ${order._id}`);
       }
     }
+
 
     const savedOrder = await order.save();
     const populated = await Order.findById(savedOrder._id).populate("userId", "name");

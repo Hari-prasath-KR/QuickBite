@@ -65,16 +65,10 @@ const AdminDashboard = () => {
   // Tab Navigation State
   const [activeTab, setActiveTab] = useState("caterers"); // caterers, users, settings
 
-  // System Configurations Local State
-  const [maintenanceMode, setMaintenanceMode] = useState(() => {
-    return localStorage.getItem("qb_maintenance_mode") === "true";
-  });
-  const [taxRate, setTaxRate] = useState(() => {
-    return localStorage.getItem("qb_tax_rate") || "5.00";
-  });
-  const [starterCredits, setStarterCredits] = useState(() => {
-    return localStorage.getItem("qb_starter_credits") || "500";
-  });
+  // System Configurations State
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [taxRate, setTaxRate] = useState("5.00");
+  const [starterCredits, setStarterCredits] = useState("500");
   const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
@@ -86,13 +80,19 @@ const AdminDashboard = () => {
       setLoadingStats(true);
       setLoadingCaterings(true);
 
-      const [statsRes, cateringsRes] = await Promise.all([
+      const [statsRes, cateringsRes, settingsRes] = await Promise.all([
         api.get("/admin/analytics/dashboard-summary"),
-        api.get("/caterings")
+        api.get("/caterings"),
+        api.get("/admin/settings")
       ]);
 
       setStats(statsRes.data);
       setCaterings(cateringsRes.data);
+      if (settingsRes.data) {
+        setMaintenanceMode(settingsRes.data.maintenanceMode);
+        setTaxRate(settingsRes.data.taxRate.toString());
+        setStarterCredits(settingsRes.data.starterCredits.toString());
+      }
     } catch (err) {
       console.error("Error fetching admin dashboard operational details:", err);
     } finally {
@@ -101,20 +101,31 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSaveSettings = (e) => {
+  const handleSaveSettings = async (e) => {
     e.preventDefault();
     setSavingSettings(true);
     
-    // Sync to local storage
-    localStorage.setItem("qb_maintenance_mode", maintenanceMode.toString());
-    localStorage.setItem("qb_tax_rate", taxRate);
-    localStorage.setItem("qb_starter_credits", starterCredits);
-    
-    setTimeout(() => {
+    try {
+      const res = await api.put("/admin/settings", {
+        maintenanceMode,
+        taxRate: Number(taxRate),
+        starterCredits: Number(starterCredits)
+      });
+      if (res.data) {
+        // Also update local states in case updated by server sanitization
+        setMaintenanceMode(res.data.settings.maintenanceMode);
+        setTaxRate(res.data.settings.taxRate.toString());
+        setStarterCredits(res.data.settings.starterCredits.toString());
+        toast.success("System configurations applied & saved successfully platform-wide!");
+      }
+    } catch (err) {
+      console.error("Error saving global configurations:", err);
+      toast.error(err.response?.data?.message || "Failed to apply system configurations.");
+    } finally {
       setSavingSettings(false);
-      toast.success("System configurations applied successfully platform-wide!");
-    }, 800);
+    }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white flex flex-col">

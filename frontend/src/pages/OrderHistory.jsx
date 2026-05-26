@@ -106,6 +106,8 @@ const OrderHistory = () => {
     return JSON.parse(saved);
   });
 
+  const [taxRate, setTaxRate] = useState(5.0);
+
   useEffect(() => {
     fetchOrderHistory();
   }, [navigate]);
@@ -113,8 +115,17 @@ const OrderHistory = () => {
   const fetchOrderHistory = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/order/customer");
+      const [res, settingsRes] = await Promise.all([
+        api.get("/order/customer"),
+        api.get("/admin/settings").catch((e) => {
+          console.log("Ignored settings load error in history:", e);
+          return { data: { taxRate: 5.0 } };
+        })
+      ]);
       setOrders(res.data);
+      if (settingsRes && settingsRes.data) {
+        setTaxRate(settingsRes.data.taxRate);
+      }
     } catch (err) {
       console.error("Error fetching order history:", err);
       if (err.response && err.response.status === 401) {
@@ -125,6 +136,7 @@ const OrderHistory = () => {
       setLoading(false);
     }
   };
+
 
   const openReceipt = (order) => {
     setSelectedOrder(order);
@@ -372,8 +384,8 @@ const OrderHistory = () => {
                       <p className="text-slate-400 text-xs font-semibold">
                         {order.payment?.paid ? "Grand Total paid" : "Grand Total (Pay at Counter)"}
                       </p>
-                      <p className="text-2xl font-black text-green-600">₹{(order.total * 1.05).toFixed(2)}</p>
-                      <p className="text-slate-400 text-[10px] italic">Includes 5% GST (₹{(order.total * 0.05).toFixed(2)})</p>
+                      <p className="text-2xl font-black text-green-600">₹{(order.total * (1 + taxRate / 100)).toFixed(2)}</p>
+                      <p className="text-slate-400 text-[10px] italic">Includes {taxRate.toFixed(1)}% GST (₹{(order.total * (taxRate / 100)).toFixed(2)})</p>
                     </div>
 
                     <div className="space-y-2 w-full mt-6">
@@ -692,16 +704,16 @@ const OrderHistory = () => {
                   <span>₹{selectedOrder.total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-500">
-                  <span>CGST (2.5%)</span>
-                  <span>₹{(selectedOrder.total * 0.025).toFixed(2)}</span>
+                  <span>CGST ({(taxRate / 2).toFixed(1)}%)</span>
+                  <span>₹{(selectedOrder.total * (taxRate / 2 / 100)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-500 border-b pb-2 border-dashed">
-                  <span>SGST (2.5%)</span>
-                  <span>₹{(selectedOrder.total * 0.025).toFixed(2)}</span>
+                  <span>SGST ({(taxRate / 2).toFixed(1)}%)</span>
+                  <span>₹{(selectedOrder.total * (taxRate / 2 / 100)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xl font-extrabold text-slate-800 pt-2">
                   <span>Grand Total (Incl. GST)</span>
-                  <span className="text-green-700">₹{(selectedOrder.total * 1.05).toFixed(2)}</span>
+                  <span className="text-green-700">₹{(selectedOrder.total * (1 + taxRate / 100)).toFixed(2)}</span>
                 </div>
               </div>
             </div>

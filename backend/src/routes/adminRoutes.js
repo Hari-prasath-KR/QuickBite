@@ -7,7 +7,9 @@ import {
   getAllUsers,
   updateUserWallet,
   updateUserRole,
-  deleteUser
+  deleteUser,
+  getSystemSettings,
+  updateSystemSettings
 } from "../controllers/adminController.js";
 import { requireAdmin,requireAuth } from "../middleware/auth.js";
 
@@ -24,4 +26,9 @@ router.put("/users/:id/wallet", requireAuth, requireAdmin, updateUserWallet);
 router.put("/users/:id/role", requireAuth, requireAdmin, updateUserRole);
 router.delete("/users/:id", requireAuth, requireAdmin, deleteUser);
 
-export default router;
+// Global Configurations Control
+router.get("/settings", requireAuth, getSystemSettings);
+router.put("/settings", requireAuth, requireAdmin, updateSystemSettings);
+
+export default router;
+

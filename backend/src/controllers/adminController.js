@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+import SystemSetting from "../models/systemSetting.js";
 
 
 dotenv.config();
@@ -198,4 +199,44 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: "Error deleting user account", error: error.message });
   }
 };
+
+// Get Global Settings
+export const getSystemSettings = async (req, res) => {
+  try {
+    let settings = await SystemSetting.findOne({ key: "global_config" });
+    if (!settings) {
+      settings = await SystemSetting.create({
+        key: "global_config",
+        maintenanceMode: false,
+        taxRate: 5.0,
+        starterCredits: 500
+      });
+    }
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching system settings", error: error.message });
+  }
+};
+
+// Update Global Settings
+export const updateSystemSettings = async (req, res) => {
+  try {
+    const { maintenanceMode, taxRate, starterCredits } = req.body;
+
+    let settings = await SystemSetting.findOne({ key: "global_config" });
+    if (!settings) {
+      settings = new SystemSetting({ key: "global_config" });
+    }
+
+    if (maintenanceMode !== undefined) settings.maintenanceMode = Boolean(maintenanceMode);
+    if (taxRate !== undefined && !isNaN(Number(taxRate))) settings.taxRate = Number(taxRate);
+    if (starterCredits !== undefined && !isNaN(Number(starterCredits))) settings.starterCredits = Number(starterCredits);
+
+    await settings.save();
+    res.json({ message: "System settings updated successfully", settings });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating system settings", error: error.message });
+  }
+};
+
 

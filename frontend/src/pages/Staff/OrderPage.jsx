@@ -113,6 +113,21 @@ const CollectPaymentModal = ({ order, onClose, onConfirm }) => {
   const [submitting, setSubmitting] = useState(false);
   const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
   const [mockPaymentData, setMockPaymentData] = useState(null);
+  const [taxRate, setTaxRate] = useState(5.0);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get("http://localhost:5001/api/admin/settings", { withCredentials: true });
+        if (res.data) {
+          setTaxRate(res.data.taxRate);
+        }
+      } catch (err) {
+        console.log("Error loading dynamic settings in CollectPaymentModal:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleConfirm = async (method) => {
     if (method === "Cash") {
@@ -126,7 +141,8 @@ const CollectPaymentModal = ({ order, onClose, onConfirm }) => {
       }
     } else if (method === "Online") {
       setSubmitting(true);
-      const grandTotalPaise = Math.round(order.total * 1.05 * 100);
+      const grandTotalPaise = Math.round(order.total * (1 + taxRate / 100) * 100);
+
       
       let razorpayOrder;
       try {
@@ -686,6 +702,22 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
   const [submitting, setSubmitting] = useState(false);
   const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
   const [mockPaymentData, setMockPaymentData] = useState(null);
+  const [taxRate, setTaxRate] = useState(5.0);
+
+  // Fetch configurations on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get("http://localhost:5001/api/admin/settings", { withCredentials: true });
+        if (res.data) {
+          setTaxRate(res.data.taxRate);
+        }
+      } catch (err) {
+        console.log("Error loading global configurations in OfflineOrderModal:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Load branch menu items on mount
   useEffect(() => {
@@ -693,6 +725,7 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
       fetchBranchMenu();
     }
   }, [user]);
+
 
   const fetchBranchMenu = async () => {
     setLoadingMenu(true);
@@ -745,7 +778,7 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
     return sum + (price * qty);
   }, 0);
 
-  const gst = subtotal * 0.05; // 5% GST
+  const gst = subtotal * (taxRate / 100); // Dynamic GST
   const grandTotal = subtotal + gst;
 
   // Helper to load external script dynamically
@@ -1387,11 +1420,11 @@ const OfflineOrderModal = ({ user, onClose, onOrderCreated }) => {
                 <div className="space-y-1 pt-1 text-[10px] font-bold">
                   <div className="flex justify-between font-medium text-slate-500">
                     <span>Subtotal:</span>
-                    <span>₹{(createdOrder.total - (createdOrder.total * 0.05 / 1.05)).toFixed(2)}</span>
+                    <span>₹{(createdOrder.total - (createdOrder.total * (taxRate / 100) / (1 + taxRate / 100))).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-medium text-slate-500">
-                    <span>GST (5%):</span>
-                    <span>₹{(createdOrder.total * 0.05 / 1.05).toFixed(2)}</span>
+                    <span>GST ({taxRate.toFixed(1)}%):</span>
+                    <span>₹{(createdOrder.total * (taxRate / 100) / (1 + taxRate / 100)).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-xs font-black text-slate-900 pt-1.5 border-t border-slate-100">
                     <span>GRAND TOTAL:</span>
