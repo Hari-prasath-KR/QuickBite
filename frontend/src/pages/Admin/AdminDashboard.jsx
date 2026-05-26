@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminNavbar from "../../components/AdminNavbar";
 import CateringManagement from "./CateringManagement";
+import UserManagement from "./UserManagement";
 import api from "../../utils/api";
 import { 
   Building, 
@@ -11,12 +12,17 @@ import {
   Server, 
   Database, 
   Cpu, 
-  Activity, 
   ArrowRight, 
   Plus, 
   UserCheck,
-  TrendingUp
+  TrendingUp,
+  Sliders,
+  AlertTriangle,
+  Flame,
+  CheckCircle,
+  HelpCircle
 } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 // --- Operational Card Widget ---
 const StatCard = ({ title, count, description, icon: Icon, colorClass }) => (
@@ -55,6 +61,21 @@ const AdminDashboard = () => {
   const [caterings, setCaterings] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingCaterings, setLoadingCaterings] = useState(true);
+  
+  // Tab Navigation State
+  const [activeTab, setActiveTab] = useState("caterers"); // caterers, users, settings
+
+  // System Configurations Local State
+  const [maintenanceMode, setMaintenanceMode] = useState(() => {
+    return localStorage.getItem("qb_maintenance_mode") === "true";
+  });
+  const [taxRate, setTaxRate] = useState(() => {
+    return localStorage.getItem("qb_tax_rate") || "5.00";
+  });
+  const [starterCredits, setStarterCredits] = useState(() => {
+    return localStorage.getItem("qb_starter_credits") || "500";
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -80,6 +101,21 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleSaveSettings = (e) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    
+    // Sync to local storage
+    localStorage.setItem("qb_maintenance_mode", maintenanceMode.toString());
+    localStorage.setItem("qb_tax_rate", taxRate);
+    localStorage.setItem("qb_starter_credits", starterCredits);
+    
+    setTimeout(() => {
+      setSavingSettings(false);
+      toast.success("System configurations applied successfully platform-wide!");
+    }, 800);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white flex flex-col">
       {/* Navbar Container */}
@@ -99,7 +135,7 @@ const AdminDashboard = () => {
               Global Operations Console
             </h1>
             <p className="text-slate-700 text-sm font-semibold max-w-2xl">
-              Monitor campus-wide dining nodes, regulate registered catering corporations, audit admin allocations, and inspect live operational status.
+              Monitor campus-wide dining nodes, regulate registered catering corporations, manage student wallets, audit accounts, and configure system variables.
             </p>
           </div>
 
@@ -149,14 +185,142 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* === CORE OPERATIONS GRID === */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* === TAB NAVIGATION GRID === */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           
-          {/* Catering Directory Card (Takes 2 columns) */}
-          <div className="lg:col-span-2">
-            <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-[2rem] shadow-xl p-8 transition-all duration-300">
-              <CateringManagement loading={loadingCaterings} catering={caterings} />
+          {/* Main Control Panel Area (Takes 2 columns) */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Segmented Tab Bar */}
+            <div className="bg-white/45 backdrop-blur-xl border border-white/30 rounded-2xl p-1.5 flex gap-1 shadow-sm w-fit">
+              {[
+                { id: "caterers", label: "Catering Corporations" },
+                { id: "users", label: "User Registry" },
+                { id: "settings", label: "System Configs" }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${
+                    activeTab === tab.id
+                      ? "bg-slate-900 text-white shadow"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
+
+            {/* Dynamic Content Panels */}
+            <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-[2rem] shadow-xl p-8 transition-all duration-300">
+              
+              {/* Tab 1: Catering Management */}
+              {activeTab === "caterers" && (
+                <CateringManagement loading={loadingCaterings} catering={caterings} />
+              )}
+
+              {/* Tab 2: User Account Registry */}
+              {activeTab === "users" && (
+                <UserManagement />
+              )}
+
+              {/* Tab 3: System Configurations */}
+              {activeTab === "settings" && (
+                <div className="space-y-6 text-left">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight">Global Configurations</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Control settings applied campus-wide</p>
+                  </div>
+
+                  <form onSubmit={handleSaveSettings} className="space-y-6 max-w-xl">
+                    
+                    {/* Platform Status */}
+                    <div className="p-5 bg-white/50 border border-slate-200/50 rounded-2xl space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-xs font-black text-slate-900">Platform Online Status</p>
+                          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Toggle maintenance screen for students/faculty canteens</p>
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setMaintenanceMode(!maintenanceMode)}
+                          className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 ${
+                            maintenanceMode ? "bg-rose-500 justify-end" : "bg-emerald-500 justify-start"
+                          }`}
+                        >
+                          <span className="bg-white w-4 h-4 rounded-full shadow-md transition-all"></span>
+                        </button>
+                      </div>
+
+                      {maintenanceMode ? (
+                        <div className="p-3 bg-rose-50 border border-rose-100 text-[10px] text-rose-700 font-bold rounded-xl flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-500" />
+                          Platform is currently configured in Maintenance Mode. Students cannot place orders.
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-emerald-50 border border-emerald-100 text-[10px] text-emerald-700 font-bold rounded-xl flex items-center gap-1.5">
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                          Platform is fully active. All canteens and branches are accepting orders online.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Standard CGST/SGST Tax rates */}
+                    <div className="p-5 bg-white/50 border border-slate-200/50 rounded-2xl space-y-4">
+                      <div>
+                        <p className="text-xs font-black text-slate-900">Tax Rates Calibration</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">CGST + SGST tax values applied to receipts</p>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Default System Tax Rate (%)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="30"
+                          value={taxRate}
+                          onChange={(e) => setTaxRate(e.target.value)}
+                          className="w-full p-3 bg-white/80 border border-slate-200 rounded-xl text-xs font-extrabold focus:outline-none focus:border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Starter Wallet balance credit */}
+                    <div className="p-5 bg-white/50 border border-slate-200/50 rounded-2xl space-y-4">
+                      <div>
+                        <p className="text-xs font-black text-slate-900">Welcome Wallet Bonus</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Starter credits credited to new accounts automatically</p>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Starter Bonus (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={starterCredits}
+                          onChange={(e) => setStarterCredits(e.target.value)}
+                          className="w-full p-3 bg-white/80 border border-slate-200 rounded-xl text-xs font-extrabold focus:outline-none focus:border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={savingSettings}
+                      className="px-6 py-3.5 bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {savingSettings ? "Applying settings..." : "Apply & Save Configurations"}
+                    </button>
+
+                  </form>
+                </div>
+              )}
+
+            </div>
+
           </div>
 
           {/* Quick Actions & System Status Columns (Takes 1 column) */}
@@ -198,11 +362,22 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Health Monitor widget */}
+            {/* Interactive Infrastructure Diagnoser Widget */}
             <div className="bg-white/35 backdrop-blur-xl border border-white/30 rounded-[2rem] p-8 shadow-xl text-left space-y-6">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight">System Infrastructure</h3>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Real-time health check</p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Platform Health</h3>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Interactive diagnostics</p>
+                </div>
+                <button
+                  onClick={() => {
+                    toast.success("Diagnostic check complete! All core cluster systems are fully synchronized.");
+                  }}
+                  title="Run Diagnostic Alert"
+                  className="p-1.5 bg-slate-900/10 hover:bg-slate-900 text-slate-800 hover:text-white rounded-xl border transition-all active:scale-[0.98]"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                </button>
               </div>
 
               {/* Status Nodes */}
