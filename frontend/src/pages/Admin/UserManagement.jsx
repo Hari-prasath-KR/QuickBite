@@ -205,15 +205,15 @@ const UserManagement = () => {
             No accounts matching filters found.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-thin">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-white/50 border-b border-slate-100 text-[10px] uppercase font-black tracking-wider text-slate-500">
-                  <th className="py-4 px-6 text-left">User Details</th>
-                  <th className="py-4 px-6 text-left">Platform Permission</th>
-                  <th className="py-4 px-6 text-left">Wallet Balance</th>
-                  <th className="py-4 px-6 text-left">Organization links</th>
-                  <th className="py-4 px-6 text-center">Operational Controls</th>
+                <tr className="text-[10px] uppercase font-black tracking-wider text-slate-500">
+                  <th className="sticky top-0 bg-slate-50/90 backdrop-blur-md z-10 py-4 px-6 text-left border-b border-slate-200 shadow-sm">User Details</th>
+                  <th className="sticky top-0 bg-slate-50/90 backdrop-blur-md z-10 py-4 px-6 text-left border-b border-slate-200 shadow-sm">Platform Permission</th>
+                  <th className="sticky top-0 bg-slate-50/90 backdrop-blur-md z-10 py-4 px-6 text-left border-b border-slate-200 shadow-sm">Wallet Balance</th>
+                  <th className="sticky top-0 bg-slate-50/90 backdrop-blur-md z-10 py-4 px-6 text-left border-b border-slate-200 shadow-sm">Organization links</th>
+                  <th className="sticky top-0 bg-slate-50/90 backdrop-blur-md z-10 py-4 px-6 text-center border-b border-slate-200 shadow-sm font-black">Operational Controls</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -293,6 +293,7 @@ const UserManagement = () => {
               </tbody>
             </table>
           </div>
+
         )}
       </div>
 
