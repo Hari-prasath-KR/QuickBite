@@ -37,8 +37,13 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Branch",
     default: null,
+  },
+  walletBalance: {
+    type: Number,
+    default: 0,
   }
 }, { timestamps: true });
+
 
 userSchema.index(
    {role:1,cateringId:1},
