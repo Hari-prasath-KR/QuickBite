@@ -42,20 +42,25 @@ const XMarkIcon = (props) => (
   </svg>
 );
 
-const StatCard = ({ title, value, change, icon, iconBgColor }) => (
-  <div className="bg-white/80 backdrop-blur-sm border border-gray-200 p-6 rounded-xl shadow-lg">
-    <div className="flex items-start justify-between">
-      <div className="space-y-2">
-        <h3 className="text-gray-600">{title}</h3>
-        <p className="text-4xl font-bold text-gray-900">{value}</p>
-        <p className="text-sm text-green-600 font-semibold">{change}</p>
+const StatCard = ({ title, value, change, icon, iconBgColor }) => {
+  const isGreen = iconBgColor.includes("green");
+  const bgTint = isGreen 
+    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" 
+    : "bg-amber-500/10 border-amber-500/20 text-amber-600";
+
+  return (
+    <div className="bg-white/45 backdrop-blur-md border border-white/35 p-5 rounded-3xl flex items-center gap-4 transition-all hover:scale-[1.01] shadow-lg">
+      <div className={`p-4 rounded-2xl border shadow-inner flex-shrink-0 flex items-center justify-center ${bgTint}`}>
+        {React.cloneElement(icon, { className: "h-6 w-6" })}
       </div>
-      <div className={`p-3 rounded-md text-white ${iconBgColor}`}>
-        {icon}
+      <div className="flex-grow min-w-0">
+        <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider truncate">{title}</h3>
+        <p className="text-3xl font-black text-slate-800 mt-1">{value}</p>
+        <p className={`text-[10px] font-black uppercase tracking-wider mt-1 ${isGreen ? "text-emerald-600" : "text-amber-600"}`}>{change}</p>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const STEPS = [
   { label: "Pending", icon: "⏳" },
@@ -802,7 +807,7 @@ const PopularDishes = ({ dishes }) => {
         <a href="#" className={viewAllClasses}>View all</a>
       </div>
       <ul className="space-y-4">
-        {dishes.map((dish, index) => (
+        {dishes.slice(0, 5).map((dish, index) => (
           // List item structure matching the image's layout
           <li key={index} className={listItemClasses}>
             {/* Faded gray text for the rank number */}
