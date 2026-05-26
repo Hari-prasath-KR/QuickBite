@@ -21,6 +21,8 @@ import { MdOutlineMore, MdPowerSettingsNew, MdAccessTime } from "react-icons/md"
 function MorePage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [shiftRating, setShiftRating] = useState(4.8);
+  const [feedbackCount, setFeedbackCount] = useState(24);
 
   // Operational Settings States
   const [isBranchOpen, setIsBranchOpen] = useState(true);
@@ -140,6 +142,26 @@ function MorePage() {
       setUser(u);
 
       const bId = u.branchId;
+      const catId = u.cateringId;
+
+      if (catId) {
+        try {
+          const feedbackRes = await axios.get(
+            `http://localhost:5001/api/admin/feedback/catering/${catId}`,
+            { withCredentials: true }
+          );
+          if (feedbackRes.data.averageRating > 0) {
+            setShiftRating(feedbackRes.data.averageRating);
+            setFeedbackCount(feedbackRes.data.count);
+          } else {
+            setShiftRating(5.0); // default perfect score
+            setFeedbackCount(0);
+          }
+        } catch (fErr) {
+          console.error("Failed to fetch catering feedback statistics:", fErr);
+        }
+      }
+
       if (bId) {
         // Fetch current branch status from DB to sync UI
         const branchRes = await axios.get(`http://localhost:5001/api/branch/detail/${bId}`);
@@ -423,8 +445,10 @@ function MorePage() {
               </div>
               <div>
                 <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Shift Rating</p>
-                <h3 className="text-xl font-black text-slate-800 mt-0.5">4.8 / 5.0</h3>
-                <p className="text-[10px] font-bold text-slate-400 mt-1">Excellent (24 client feedbacks)</p>
+                <h3 className="text-xl font-black text-slate-800 mt-0.5">{shiftRating.toFixed(1)} / 5.0</h3>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">
+                  {shiftRating >= 4.5 ? "Excellent" : shiftRating >= 3.5 ? "Good" : "Needs Review"} ({feedbackCount} client {feedbackCount === 1 ? "feedback" : "feedbacks"})
+                </p>
               </div>
             </div>
 

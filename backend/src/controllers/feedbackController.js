@@ -44,3 +44,31 @@ export const addFeedback = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// GET feedback stats for a specific catering brand (accessible by staff/admins)
+export const getCateringFeedbackSummary = async (req, res) => {
+  try {
+    const { cateringId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(cateringId)) {
+      return res.status(400).json({ message: "Invalid catering ID" });
+    }
+
+    const feedbacks = await Feedback.find({ cateringId });
+    const count = feedbacks.length;
+
+    const avgAgg = await Feedback.aggregate([
+      { $match: { cateringId: new mongoose.Types.ObjectId(cateringId) } },
+      { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+    ]);
+
+    const averageRating = (avgAgg[0] && avgAgg[0].avgRating) || 0;
+
+    res.json({
+      averageRating: Number(averageRating.toFixed(1)),
+      count
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
