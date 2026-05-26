@@ -79,13 +79,23 @@ const recentOrdersRaw = await Order.find({
           totalQty: { $sum: "$items.quantity" }
         }
       },
+      {
+        $lookup: {
+          from: "menuitems",
+          localField: "_id",
+          foreignField: "_id",
+          as: "menuItemInfo"
+        }
+      },
+      { $unwind: { path: "$menuItemInfo", preserveNullAndEmptyArrays: true } },
       { $sort: { totalQty: -1 } },
       { $limit: 6 },
       {
         $project: {
           _id: 0,
           name: 1,
-          orders: "$totalQty"
+          orders: "$totalQty",
+          imageUrl: "$menuItemInfo.imageUrl"
         }
       }
     ]);
