@@ -8,7 +8,8 @@ import {
   verifyRazorpayPayment, 
   getCustomerOrders,
   getBranchOrdersToday,
-  markPaymentSuccess
+  markPaymentSuccess,
+  cancelOrderCustomer
 } from "../controllers/orderController.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -25,6 +26,8 @@ router.put("/:orderId/payment-success", requireAuth, markPaymentSuccess); // Mar
 router.post("/razorpay-order", createRazorpayOrder);
 router.post("/verify", verifyRazorpayPayment);
 router.get("/customer", requireAuth, getCustomerOrders);
+router.put("/:orderId/cancel", requireAuth, cancelOrderCustomer);
+
 
 export default router;
 

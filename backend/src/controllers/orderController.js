@@ -442,3 +442,99 @@ export const markPaymentSuccess = async (req, res) => {
   }
 };
 
+// ❌ Customer Order Cancellation with dynamic status-based penalty/refund rules
+export const cancelOrderCustomer = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user._id;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Security check: Must own the order
+    if (order.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized to cancel this order" });
+    }
+
+    const currentStatus = order.status; // pending, preparing, ready, completed, cancelled
+    const normalizedStatus = String(currentStatus).toLowerCase();
+    
+    // Check if already completed or cancelled
+    if (normalizedStatus === "completed" || normalizedStatus === "cancelled" || normalizedStatus === "delivered") {
+      return res.status(400).json({ message: `Cannot cancel an order that is already ${currentStatus}` });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const orderTotal = order.total;
+    let penalty = 0;
+    let refund = 0;
+    let chargeDetail = "";
+
+    // Case 1: Paid (Online or Wallet Pre-payment)
+    if (order.payment?.paid) {
+      if (normalizedStatus === "pending") {
+        refund = orderTotal;
+        chargeDetail = "100% Full Refund (Pending status)";
+      } else if (normalizedStatus === "preparing") {
+        refund = Number((orderTotal * 0.75).toFixed(2));
+        chargeDetail = "75% Partial Refund (Preparing status)";
+      } else if (normalizedStatus === "ready") {
+        refund = Number((orderTotal * 0.50).toFixed(2));
+        chargeDetail = "50% Partial Refund (Ready status)";
+      }
+
+      user.walletBalance = Number(((user.walletBalance || 0) + refund).toFixed(2));
+    } 
+    // Case 2: Unpaid (Cash at pickup option selected)
+    else {
+      if (normalizedStatus === "pending") {
+        penalty = 0;
+        chargeDetail = "0% Cancellation Penalty (Pending status)";
+      } else if (normalizedStatus === "preparing") {
+        penalty = Number((orderTotal * 0.25).toFixed(2));
+        chargeDetail = "25% Cancellation Penalty (Preparing status)";
+      } else if (normalizedStatus === "ready") {
+        penalty = Number((orderTotal * 0.50).toFixed(2));
+        chargeDetail = "50% Cancellation Penalty (Ready status)";
+      }
+
+      user.walletBalance = Number(((user.walletBalance || 0) - penalty).toFixed(2));
+    }
+
+    // Set order status to Cancelled
+    order.status = "Cancelled";
+    await order.save();
+    await user.save();
+
+    // Socket emission to synchronize POS screens in real time
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("orderUpdated", {
+        orderId: order._id.toString(),
+        status: "Cancelled",
+        branchId: order.branchId?.toString()
+      });
+    }
+
+    res.json({
+      message: "Order cancelled successfully",
+      refund,
+      penalty,
+      chargeDetail,
+      newWalletBalance: user.walletBalance,
+      order
+    });
+
+  } catch (err) {
+    console.error("Error cancelling order:", err);
+    res.status(500).json({ message: "Server error during cancellation", error: err.message });
+  }
+};
+
+
