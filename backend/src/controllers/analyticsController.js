@@ -311,3 +311,26 @@ export const getCateringAnalytics = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const getDashboardSummary = async (req, res) => {
+  try {
+    const now = new Date();
+    const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const [catererCount, branchCount, customerCount, ordersToday] = await Promise.all([
+      Catering.countDocuments({}),
+      Branch.countDocuments({}),
+      User.countDocuments({ role: "customer" }),
+      Order.countDocuments({ createdAt: { $gte: todayDate } })
+    ]);
+
+    return res.json({
+      catererCount,
+      branchCount,
+      customerCount,
+      ordersToday
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};

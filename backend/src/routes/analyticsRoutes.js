@@ -1,9 +1,10 @@
 import express from "express";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
-import { getCateringAnalytics, getIncomeSummary, mostActiveCatering, revenuePerCatering, revenueSummary, topDishes } from "../controllers/analyticsController.js";
+import { getCateringAnalytics, getIncomeSummary, mostActiveCatering, revenuePerCatering, revenueSummary, topDishes, getDashboardSummary } from "../controllers/analyticsController.js";
 
 const router =express.Router();
 
+router.get("/dashboard-summary", requireAuth, requireAdmin, getDashboardSummary);
 router.get("/revenue-summary",requireAuth,requireAdmin,revenueSummary);
 router.get("/revenue-per-catering",requireAuth,requireAdmin,revenuePerCatering);
 router.get("/top-dishes",requireAuth,requireAdmin,topDishes);
