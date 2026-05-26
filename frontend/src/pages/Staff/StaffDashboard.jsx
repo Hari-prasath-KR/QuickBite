@@ -42,27 +42,20 @@ const XMarkIcon = (props) => (
   </svg>
 );
 
-const StatCard = ({ title, value, change, icon, iconBgColor }) => {
-  const isGreen = iconBgColor.includes("green");
-  const tintClass = isGreen 
-    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" 
-    : "bg-amber-500/10 border-amber-500/20 text-amber-600";
-
-  return (
-    <div className="bg-white/45 backdrop-blur-xl border border-white/40 p-6 rounded-3xl flex items-center gap-4 transition-all hover:scale-[1.02] shadow-xl hover:shadow-2xl">
-      <div className={`p-4 rounded-2xl border shadow-inner flex-shrink-0 flex items-center justify-center ${tintClass}`}>
-        {React.cloneElement(icon, { className: "h-6 w-6" })}
+const StatCard = ({ title, value, change, icon, iconBgColor }) => (
+  <div className="bg-white/80 backdrop-blur-sm border border-gray-200 p-6 rounded-xl shadow-lg">
+    <div className="flex items-start justify-between">
+      <div className="space-y-2">
+        <h3 className="text-gray-600">{title}</h3>
+        <p className="text-4xl font-bold text-gray-900">{value}</p>
+        <p className="text-sm text-green-600 font-semibold">{change}</p>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-black text-slate-500 uppercase tracking-wider">{title}</p>
-        <h3 className="text-3xl font-black text-slate-800 mt-0.5">{value}</h3>
-        <p className="text-[10px] font-bold text-slate-400 mt-1">
-          {change}
-        </p>
+      <div className={`p-3 rounded-md text-white ${iconBgColor}`}>
+        {icon}
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 const STEPS = [
   { label: "Pending", icon: "⏳" },
@@ -687,31 +680,13 @@ const OrderStatusModal = ({ order, onClose, onStatusUpdated }) => {
 
 const RecentOrders = ({ orders, onOrderClick }) => {
   const [showAll, setShowAll] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredOrders = orders.filter(order => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) return true;
-    
-    const customer = (order.customerName || order.userId?.name || "").toLowerCase();
-    const table = String(order.table || "").toLowerCase();
-    const token = String(order.tokenNumber || "").toLowerCase();
-    const itemsMatched = (order.items || []).some(item => 
-      (item.name || "").toLowerCase().includes(query)
-    );
-    
-    return customer.includes(query) || table.includes(query) || token.includes(query) || itemsMatched;
-  });
-
-  const displayOrders = showAll ? filteredOrders : filteredOrders.slice(0, 5);
+  const displayOrders = showAll ? orders : orders.slice(0, 5);
 
   if (!orders || orders.length === 0) {
     return (
-      <div className="bg-white/45 backdrop-blur-xl border border-white/35 p-6 rounded-3xl shadow-xl">
-        <h2 className="text-xl font-black text-slate-800 mb-4 tracking-tight flex items-center gap-2">
-          <span>🍳</span> Active Kitchen Queue
-        </h2>
-        <p className="text-slate-500 text-xs font-semibold">No active orders in the kitchen.</p>
+      <div className="bg-white/80 backdrop-blur-sm border border-gray-200 p-6 rounded-xl shadow-lg">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Orders</h2>
+        <p className="text-gray-500">No recent orders to display.</p>
       </div>
     );
   }
@@ -720,97 +695,77 @@ const RecentOrders = ({ orders, onOrderClick }) => {
     String(status).toLowerCase().includes("completed")
       ? "text-green-600 bg-green-100 border-green-200"
       : String(status).toLowerCase().includes("pending")
-      ? "text-red-600 bg-red-100 border-red-200 animate-pulse"
+      ? "text-red-600 bg-red-100 border-red-200"
       : "text-yellow-600 bg-yellow-100 border-yellow-250";
 
+  const handleViewToggle = (e) => {
+    e.preventDefault();
+    setShowAll(prev => !prev);
+  };
+
   return (
-    <div className="bg-white/45 backdrop-blur-xl border border-white/35 p-6 rounded-3xl shadow-xl space-y-4">
-      <div className="flex justify-between items-center gap-2">
-        <div>
-          <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-            <span>🍳</span> Active Kitchen Queue
-          </h2>
-          <p className="text-xs font-semibold text-slate-500 mt-0.5">Track and update preparing or pending orders</p>
-        </div>
-        {filteredOrders.length > 5 && (
-          <button 
-            onClick={() => setShowAll(prev => !prev)} 
-            className="text-xs font-black text-emerald-600 hover:text-emerald-700 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-xl transition active:scale-95 cursor-pointer"
-          >
-            {showAll ? "Show Less" : `View All (${filteredOrders.length})`}
+    <div className="bg-white/80 backdrop-blur-sm border border-gray-200 p-6 rounded-xl shadow-lg">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-gray-800">Recent Orders</h2>
+        {orders.length > 5 && (
+          <button onClick={handleViewToggle} className="text-sm text-green-600 hover:underline font-semibold">
+            {showAll ? "View less" : "View all"}
           </button>
         )}
       </div>
 
-      <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <input 
-          type="text" 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by customer, table number, token, or dish..." 
-          className="w-full bg-white/30 border border-white/40 rounded-2xl py-2.5 pl-10 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500/50 focus:bg-white transition" 
-        />
+      <div className="relative mb-4">
+        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+        <input type="text" placeholder="Search recent orders" className="w-full bg-gray-50 border border-gray-300 rounded-md py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-yellow-300" />
       </div>
 
-      {filteredOrders.length === 0 ? (
-        <p className="text-slate-500 text-xs text-center py-6 font-semibold">No orders matching your search query.</p>
-      ) : (
-        <ul className="space-y-3">
-          {displayOrders.map((order, index) => (
-            <li
-              key={order._id || index}
-              onClick={() => onOrderClick(order)}
-              className="flex flex-wrap justify-between items-center p-4 bg-white/40 hover:bg-white/80 border border-white/30 rounded-2xl transition duration-200 cursor-pointer gap-4 shadow-sm hover:scale-[1.005]"
-            >
-              <div className="flex items-center space-x-3.5 min-w-0 flex-1 sm:flex-initial">
-                <div className="w-11 h-11 bg-gradient-to-tr from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center font-black text-white shadow-md flex-shrink-0 text-sm">
-                  {order.customerName ? order.customerName.substring(0, 2).toUpperCase() : (order.userId?.name || "GS").substring(0, 2).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-extrabold text-slate-800 truncate text-sm">
-                    {order.customerName || order.userId?.name || "Guest"}
-                  </p>
-                  <p className="text-[10px] text-slate-500 font-bold mt-0.5">
-                    {order.items?.length || 0} {order.items?.length === 1 ? "item" : "items"} • Table {order.table || "N/A"} • Token: <span className="font-black text-slate-700">{order.tokenNumber || `TK-${order._id.toString().slice(-4).toUpperCase()}`}</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3 flex-wrap sm:flex-nowrap gap-y-2">
-                <span className={`px-2.5 py-1 border text-[9px] font-black rounded-full uppercase tracking-wider whitespace-nowrap ${
-                  order.payment?.paid
-                    ? "bg-green-500/10 border-green-500/20 text-green-700"
-                    : order.payment?.method === "PayLater"
-                    ? "bg-amber-500/10 border-amber-500/25 text-amber-700 animate-pulse"
-                    : "bg-rose-500/10 border-rose-500/20 text-rose-700"
-                }`}>
-                  {order.payment?.paid ? (
-                    order.payment?.method === "Cash" ? "💵 Paid (Cash)" :
-                    order.payment?.method === "Wallet" ? "✓ Paid (Wallet)" :
-                    "💳 Paid (Online)"
-                  ) : order.payment?.method === "PayLater" ? (
-                    "⏱ Pay Later"
-                  ) : (
-                    "💵 Unpaid"
-                  )}
-                </span>
-                <div className={`flex items-center text-[9px] font-black px-3 py-1 rounded-full border whitespace-nowrap ${getStatusClass(order.status)}`}>
-                  <span>{order.status}</span>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {filteredOrders.length > 5 && !showAll && (
-        <div className="text-center pt-2">
-          <button 
-            onClick={() => setShowAll(true)} 
-            className="text-xs font-black text-slate-500 hover:text-slate-800 transition"
+      <ul className="space-y-3">
+        {displayOrders.map((order, index) => (
+          <li
+            key={order._id || index}
+            onClick={() => onOrderClick(order)}
+            className="flex flex-wrap justify-between items-center p-3.5 bg-gray-50 rounded-xl transition-colors hover:bg-yellow-100/50 cursor-pointer border border-gray-200 gap-3"
           >
-            Show {filteredOrders.length - 5} more orders...
+            <div className="flex items-center space-x-4 min-w-0 flex-1 sm:flex-initial">
+              <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center font-black text-white shadow-md flex-shrink-0">
+                {order.customerName ? order.customerName.substring(0, 2).toUpperCase() : (order.userId?.name || "GS").substring(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="font-extrabold text-gray-800 truncate max-w-[140px] sm:max-w-[200px]">{order.customerName || order.userId?.name || "Guest"}</p>
+                <p className="text-xs text-slate-500 font-semibold">{order.items?.length || 0} items • Table {order.table || "N/A"}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3 flex-wrap sm:flex-nowrap gap-y-2">
+              <span className={`px-2.5 py-0.5 border text-[10px] font-black rounded-full uppercase tracking-wider whitespace-nowrap ${
+                order.payment?.paid
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : order.payment?.method === "PayLater"
+                  ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                  : "bg-red-50 text-red-700 border-red-200"
+              }`}>
+                {order.payment?.paid ? (
+                  order.payment?.method === "Cash" ? "💵 Paid (Cash)" :
+                  order.payment?.method === "Wallet" ? "✓ Paid (Wallet)" :
+                  "💳 Paid (Online)"
+                ) : order.payment?.method === "PayLater" ? (
+                  "⏱ Pay Later"
+                ) : (
+                  "💵 Unpaid"
+                )}
+              </span>
+              <div className={`flex items-center text-xs font-black px-3 py-1 rounded-full border whitespace-nowrap ${getStatusClass(order.status)}`}>
+                <span>{order.status}</span>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {orders.length > 5 && !showAll && (
+        <div className="text-center mt-4">
+          <button onClick={handleViewToggle} className="text-sm text-green-600 hover:underline font-semibold">
+            Show {orders.length - 5} more orders...
           </button>
         </div>
       )}
@@ -818,58 +773,53 @@ const RecentOrders = ({ orders, onOrderClick }) => {
   );
 };
 const PopularDishes = ({ dishes }) => {
+  // Common classes defined for clarity
+  const cardClasses = "bg-white border border-gray-200 p-6 rounded-xl shadow-lg h-full";
+  const headingClasses = "text-xl font-bold text-gray-900";
+  const viewAllClasses = "text-sm text-blue-600 hover:underline"; // Blue link for light theme
+  const rankNumberClasses = "text-lg font-bold text-gray-400 w-6";
+  const dishNameClasses = "font-semibold text-gray-800";
+  const ordersClasses = "text-xs text-gray-500";
+  const listItemClasses = "flex items-center space-x-4";
+
   if (!dishes || dishes.length === 0) {
     return (
-      <div className="bg-white/45 backdrop-blur-xl border border-white/35 p-6 rounded-3xl shadow-xl h-full">
-        <h2 className="text-xl font-black text-slate-800 mb-4 tracking-tight flex items-center gap-2">
-          <span>🔥</span> Popular Dishes
-        </h2>
-        <p className="text-slate-500 text-xs font-semibold">Not enough operational data for popular dishes yet.</p>
+      // Light theme styling for the empty state
+      <div className={cardClasses}>
+        <h2 className={headingClasses + " mb-4"}>Popular Dishes</h2>
+        <p className={ordersClasses}>Not enough data for popular dishes yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white/45 backdrop-blur-xl border border-white/35 p-6 rounded-3xl shadow-xl space-y-4">
-      <div>
-        <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-          <span>🔥</span> Popular Dishes
-        </h2>
-        <p className="text-xs font-semibold text-slate-500 mt-0.5">Top performing items based on customer demand</p>
+    // Main card container set to white background and light border/shadow
+    <div className={cardClasses}>
+      <div className="flex justify-between items-center mb-4">
+        {/* Dark text for the main heading */}
+        <h2 className={headingClasses}>Popular Dishes</h2>
+        {/* Standard link color */}
+        <a href="#" className={viewAllClasses}>View all</a>
       </div>
-      
       <ul className="space-y-4">
-        {dishes.slice(0, 8).map((dish, index) => {
-          const rankColors = [
-            "from-yellow-400 to-amber-500 text-white shadow-yellow-500/20",
-            "from-slate-300 to-slate-400 text-white shadow-slate-400/20",
-            "from-amber-600 to-amber-700 text-white shadow-amber-700/20"
-          ];
-          const defaultRankColor = "bg-slate-100 text-slate-600 border border-slate-200";
-
-          return (
-            <li key={index} className="flex items-center space-x-4 bg-white/30 border border-white/20 p-3 rounded-2xl hover:bg-white/50 transition">
-              {/* Leaderboard Rank Badges */}
-              <div className={`w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center shadow-md flex-shrink-0 ${
-                index < 3 ? `bg-gradient-to-br ${rankColors[index]}` : defaultRankColor
-              }`}>
-                {index + 1}
-              </div>
-              <img 
-                src={dish.imageUrl || `https://placehold.co/40x40/FBBF24/FFFFFF?text=${dish.name.charAt(0)}`} 
-                alt={dish.name} 
-                className="w-10 h-10 rounded-xl object-cover shadow-sm" 
-              />
-              <div className="flex-1 min-w-0">
-                <p className="font-extrabold text-slate-800 text-sm truncate">{dish.name}</p>
-                <p className="text-[10px] text-slate-500 font-bold mt-0.5 flex justify-between items-center">
-                  <span>Orders Received</span>
-                  <span className="font-black text-slate-700 bg-white/60 border border-slate-200/50 px-2 py-0.5 rounded-md">{dish.orders}</span>
-                </p>
-              </div>
-            </li>
-          );
-        })}
+        {dishes.map((dish, index) => (
+          // List item structure matching the image's layout
+          <li key={index} className={listItemClasses}>
+            {/* Faded gray text for the rank number */}
+            <span className={rankNumberClasses}>
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <img 
+              src={dish.imageUrl || `https://placehold.co/40x40/FBBF24/FFFFFF?text=${dish.name.charAt(0)}`} 
+              alt={dish.name} 
+              className="w-10 h-10 rounded-full object-cover" 
+            />
+            <div>
+              <p className={dishNameClasses}>{dish.name}</p>
+              <p className={ordersClasses}>Orders: {dish.orders}</p>
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   );
@@ -977,53 +927,33 @@ const StaffDashboard = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white text-gray-800 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white text-gray-800 font-sans">
       <StaffNavbar userName={user?.name || "Staff"} userRole={user?.role || "Staff"} />
 
-      <div className="pt-24 pb-28 px-4 md:px-8 max-w-7xl w-full mx-auto">
-        {loading && (
-          <div className="text-center py-20 bg-white/35 backdrop-blur-xl border border-white/30 rounded-3xl shadow-xl">
-            <div className="h-10 w-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-sm font-black text-slate-600 mt-4 uppercase tracking-wider">Loading Dashboard Stats...</p>
-          </div>
-        )}
-        {error && (
-          <div className="text-center py-12 bg-rose-500/10 border border-rose-500/25 rounded-3xl p-6 shadow-xl">
-            <span className="text-3xl">⚠️</span>
-            <p className="text-sm font-black text-rose-800 mt-2">{error}</p>
-          </div>
-        )}
+      <div className="pt-20 pb-20">
+        {loading && <div className="text-center p-10"><p className="text-lg font-semibold text-gray-700">Loading dashboard...</p></div>}
+        {error && <div className="text-center p-10"><p className="text-lg font-semibold text-red-600">{error}</p></div>}
 
         {!loading && !error && user && (
-          <main className="space-y-8 animate-fadeIn">
-            
-            {/* Elite Header Block */}
-            <header className="flex flex-wrap justify-between items-center gap-4 bg-white/45 backdrop-blur-md border border-white/35 rounded-3xl p-6 shadow-xl">
-              <div>
-                <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-                  <span>👋</span> {getGreeting()}, {user?.name || "Staff"}
-                </h1>
-                <p className="text-sm font-semibold text-slate-500 mt-1">
-                  Welcome to your branch console. Ensure excellent services for customers! 😊
-                </p>
-              </div>
-              <div className="text-right bg-white/30 backdrop-blur-md border border-white/40 px-6 py-2.5 rounded-2xl shadow-inner">
-                <p className="text-2xl font-mono font-black tracking-wide text-slate-800">
-                  {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
-                </p>
-                <p className="text-[10px] font-black uppercase text-slate-400 mt-0.5 tracking-wider">{formattedDate}</p>
-              </div>
-            </header>
+          <main className="p-4 sm:p-6 lg:p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-8">
+                <header className="flex flex-wrap justify-between items-start gap-4">
+                  <div>
+                    <h1 className="text-3xl font-bold text-white">{getGreeting()}, {user?.name || "Staff"}</h1>
+                    <p className="text-gray-600">Give your best services for customers 😊</p>
+                  </div>
+                  <div className="text-right bg-white p-3 rounded-lg shadow-md">
+                    <p className="text-3xl font-mono tracking-wide text-gray-800">{time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}</p>
+                    <p className="text-xs text-gray-500">{formattedDate}</p>
+                  </div>
+                </header>
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <StatCard title="Total Earnings" value={`₹${stats.totalEarnings.toFixed(2)}`} change={stats.earningsChange || "vs Yesterday"} icon={<CurrencyDollarIcon className="h-6 w-6" />} iconBgColor="bg-green-500" />
-              <StatCard title="In Progress Queue" value={stats.inProgress} change={stats.inProgressChange || "Active preparations"} icon={<ClockIcon className="h-6 w-6" />} iconBgColor="bg-yellow-500" />
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <StatCard title="Total Earnings" value={`₹${stats.totalEarnings.toFixed(2)}`} change={stats.earningsChange || "vs Yesterday"} icon={<CurrencyDollarIcon className="h-6 w-6" />} iconBgColor="bg-green-500" />
+                  <StatCard title="In Progress" value={stats.inProgress} change={stats.inProgressChange || "vs Yesterday"} icon={<ClockIcon className="h-6 w-6" />} iconBgColor="bg-yellow-500" />
+                </div>
 
-            {/* Main Content Split layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-              <div className="lg:col-span-2">
                 <RecentOrders orders={recentOrders} onOrderClick={setSelectedOrder} />
               </div>
 
