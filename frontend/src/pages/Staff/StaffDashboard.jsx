@@ -927,41 +927,62 @@ const StaffDashboard = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-200 to-white text-gray-800 font-sans">
+    <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-green-400 via-yellow-200 to-white text-gray-800 font-sans overflow-hidden">
       <StaffNavbar userName={user?.name || "Staff"} userRole={user?.role || "Staff"} />
 
-      <div className="pt-20 pb-20">
-        {loading && <div className="text-center p-10"><p className="text-lg font-semibold text-gray-700">Loading dashboard...</p></div>}
-        {error && <div className="text-center p-10"><p className="text-lg font-semibold text-red-600">{error}</p></div>}
+      {/* Main Container */}
+      <div className="pt-24 pb-28 px-4 md:px-8 flex-1 flex flex-col overflow-hidden max-w-7xl w-full mx-auto space-y-6">
+        {loading && (
+          <div className="text-center p-10 bg-white/45 backdrop-blur-md border border-white/35 rounded-3xl shadow-xl flex-1 flex items-center justify-center">
+            <p className="text-lg font-semibold text-slate-700">Loading dashboard...</p>
+          </div>
+        )}
+        {error && (
+          <div className="text-center p-10 bg-rose-500/10 border border-rose-500/25 rounded-3xl flex-1 flex items-center justify-center">
+            <p className="text-lg font-semibold text-rose-800">{error}</p>
+          </div>
+        )}
 
         {!loading && !error && user && (
-          <main className="p-4 sm:p-6 lg:p-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-8">
-                <header className="flex flex-wrap justify-between items-start gap-4">
-                  <div>
-                    <h1 className="text-3xl font-bold text-white">{getGreeting()}, {user?.name || "Staff"}</h1>
-                    <p className="text-gray-600">Give your best services for customers 😊</p>
-                  </div>
-                  <div className="text-right bg-white p-3 rounded-lg shadow-md">
-                    <p className="text-3xl font-mono tracking-wide text-gray-800">{time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}</p>
-                    <p className="text-xs text-gray-500">{formattedDate}</p>
-                  </div>
-                </header>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <StatCard title="Total Earnings" value={`₹${stats.totalEarnings.toFixed(2)}`} change={stats.earningsChange || "vs Yesterday"} icon={<CurrencyDollarIcon className="h-6 w-6" />} iconBgColor="bg-green-500" />
-                  <StatCard title="In Progress" value={stats.inProgress} change={stats.inProgressChange || "vs Yesterday"} icon={<ClockIcon className="h-6 w-6" />} iconBgColor="bg-yellow-500" />
-                </div>
-
-                <RecentOrders orders={recentOrders} onOrderClick={setSelectedOrder} />
+          <>
+            {/* Header Block matching the remaining pages exactly */}
+            <div className="flex flex-wrap justify-between items-center gap-4 bg-white/45 backdrop-blur-md border border-white/35 rounded-3xl p-6 shadow-xl shrink-0">
+              <div>
+                <h1 className="text-3xl font-black text-slate-800 tracking-tight">
+                  {getGreeting()}, {user?.name || "Staff"}
+                </h1>
+                <p className="text-sm font-semibold text-slate-500 mt-1">
+                  Give your best services for customers 😊
+                </p>
               </div>
-
-              <div className="lg:col-span-1">
-                <PopularDishes dishes={popularDishes} />
+              <div className="text-right bg-white/30 backdrop-blur-md border border-white/40 px-6 py-2.5 rounded-2xl shadow-inner">
+                <p className="text-3xl font-mono font-black tracking-wide text-slate-800">
+                  {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+                </p>
+                <p className="text-[10px] font-black uppercase text-slate-400 mt-0.5 tracking-wider">
+                  {formattedDate}
+                </p>
               </div>
             </div>
-          </main>
+
+            {/* Scrollable Center Content Workspace */}
+            <div className="flex-1 overflow-y-auto pr-1 pb-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <div className="lg:col-span-2 space-y-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <StatCard title="Total Earnings" value={`₹${stats.totalEarnings.toFixed(2)}`} change={stats.earningsChange || "vs Yesterday"} icon={<CurrencyDollarIcon className="h-6 w-6" />} iconBgColor="bg-green-500" />
+                    <StatCard title="In Progress" value={stats.inProgress} change={stats.inProgressChange || "vs Yesterday"} icon={<ClockIcon className="h-6 w-6" />} iconBgColor="bg-yellow-500" />
+                  </div>
+
+                  <RecentOrders orders={recentOrders} onOrderClick={setSelectedOrder} />
+                </div>
+
+                <div className="lg:col-span-1">
+                  <PopularDishes dishes={popularDishes} />
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
