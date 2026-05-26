@@ -622,7 +622,9 @@ const OrderPage = () => {
                     onlineSubMethod={onlineSubMethod}
                     setOnlineSubMethod={setOnlineSubMethod}
                     userProfile={userProfile}
+                    taxRate={taxRate}
                   />
+
                 </div>
               </div>
             </div>
@@ -646,7 +648,9 @@ const OrderPage = () => {
         onlineSubMethod={onlineSubMethod}
         setOnlineSubMethod={setOnlineSubMethod}
         userProfile={userProfile}
+        taxRate={taxRate}
       />
+
 
       {/* 💳 HIGH-FIDELITY QUICKBITE PAYMENT SANDBOX FALLBACK MODAL */}
       {showMockPaymentModal && mockPaymentData && (
@@ -901,8 +905,10 @@ const CartContent = ({
   setPaymentMethod,
   onlineSubMethod,
   setOnlineSubMethod,
-  userProfile
+  userProfile,
+  taxRate = 5.0
 }) => (
+
   <>
     {Object.keys(cart).length === 0 ? (
       <div className="text-center py-10 flex flex-col items-center">
