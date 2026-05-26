@@ -62,29 +62,7 @@ function MorePage() {
   const [todayOrdersCount, setTodayOrdersCount] = useState(0);
 
   // Notice Board States
-  const [notices, setNotices] = useState([
-    {
-      id: 1,
-      text: "Prep time is running high on Pizzas due to oven preheating.",
-      tag: "Alert",
-      time: "10 mins ago",
-      color: "from-amber-500/10 to-amber-600/10 text-amber-800 border-amber-500/25"
-    },
-    {
-      id: 2,
-      text: "Out of packaging boxes. Please use paper wraps for walk-in orders.",
-      tag: "Critical",
-      time: "1 hr ago",
-      color: "from-rose-500/10 to-rose-600/10 text-rose-800 border-rose-500/25"
-    },
-    {
-      id: 3,
-      text: "POS card reader is working fine again after restart.",
-      tag: "Info",
-      time: "2 hrs ago",
-      color: "from-emerald-500/10 to-emerald-600/10 text-emerald-800 border-emerald-500/25"
-    }
-  ]);
+  const [notices, setNotices] = useState([]);
   const [newNoticeText, setNewNoticeText] = useState("");
   const [newNoticeTag, setNewNoticeTag] = useState("Alert");
 
