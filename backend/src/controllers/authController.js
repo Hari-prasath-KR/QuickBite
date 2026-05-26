@@ -70,9 +70,9 @@ export const login = async (req, res) => {
       expiresIn: "7d",
     });
     res.cookie("JWT_TOKEN_QUICKBITE", token, {
-      httpOnly: true, // secure, not accessible by JS
-      secure: process.env.NODE_ENV === "production", // true in production
-      sameSite: "strict",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
     res.json({ token, role: user.role, userId: user._id, name: user.name });
@@ -129,11 +129,11 @@ export const logout = (req, res) => {
   try {
     // Must match the name and options used in login
     res.clearCookie("JWT_TOKEN_QUICKBITE", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/", // include path to be safe
-    });
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/",
+  });
     res.status(200).json({
       success: true,
       message: "Logout Successful...",
