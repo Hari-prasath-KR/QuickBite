@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import Order from "../models/order.js";
+import Branch from "../models/branch.js";
+import Catering from "../models/catering.js";
 
 dotenv.config();
 //console.log("JWT_SECRET from env:", process.env.JWT_SECRET);
@@ -88,6 +90,19 @@ export const getProfile = async (req, res) => {
     const orderCount = await Order.countDocuments({ userId: decoded.id });
     const userObj = user.toObject();
     userObj.orderCount = orderCount;
+
+    if (user.branchId) {
+      const branchObj = await Branch.findById(user.branchId);
+      if (branchObj) {
+        userObj.branchName = branchObj.name;
+      }
+    }
+    if (user.cateringId) {
+      const cateringObj = await Catering.findById(user.cateringId);
+      if (cateringObj) {
+        userObj.cateringName = cateringObj.name;
+      }
+    }
 
     res.json({ data: userObj });
 

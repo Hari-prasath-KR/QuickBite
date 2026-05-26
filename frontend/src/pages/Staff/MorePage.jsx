@@ -460,7 +460,7 @@ function MorePage() {
               <div className="truncate">
                 <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Assigned Branch</p>
                 <h3 className="text-xl font-black text-slate-800 mt-0.5 truncate">
-                  {user?.branchName || "QuickBite Campus Branch"}
+                  {user?.branchName ? `${user.branchName} (${user.cateringName || "Catering"})` : "QuickBite Campus Branch"}
                 </h3>
                 <p className="text-[10px] font-bold text-slate-400 mt-1 truncate">Staff ID: {user?._id || "Loading..."}</p>
               </div>
