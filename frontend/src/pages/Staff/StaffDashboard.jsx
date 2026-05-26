@@ -944,31 +944,35 @@ const StaffDashboard = () => {
         )}
 
         {!loading && !error && user && (
-          <>
-            {/* Header Block matching the remaining pages exactly */}
-            <div className="flex flex-wrap justify-between items-center gap-4 bg-white/45 backdrop-blur-md border border-white/35 rounded-3xl p-6 shadow-xl shrink-0">
-              <div>
-                <h1 className="text-3xl font-black text-slate-800 tracking-tight">
-                  {getGreeting()}, {user?.name || "Staff"}
-                </h1>
-                <p className="text-sm font-semibold text-slate-500 mt-1">
-                  Give your best services for customers 😊
-                </p>
-              </div>
-              <div className="text-right bg-white/30 backdrop-blur-md border border-white/40 px-6 py-2.5 rounded-2xl shadow-inner">
-                <p className="text-3xl font-mono font-black tracking-wide text-slate-800">
-                  {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
-                </p>
-                <p className="text-[10px] font-black uppercase text-slate-400 mt-0.5 tracking-wider">
-                  {formattedDate}
-                </p>
-              </div>
-            </div>
-
+          <div className="flex-1 overflow-hidden flex flex-col space-y-6">
+            
             {/* Scrollable Center Content Workspace */}
             <div className="flex-1 overflow-y-auto pr-1 pb-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-2 space-y-8">
+                
+                {/* Left 2/3 Column */}
+                <div className="lg:col-span-2 space-y-8 animate-fadeIn">
+                  
+                  {/* Header Block matching the remaining pages exactly */}
+                  <div className="flex flex-wrap justify-between items-center gap-4 bg-white/45 backdrop-blur-md border border-white/35 rounded-3xl p-6 shadow-xl shrink-0">
+                    <div>
+                      <h1 className="text-3xl font-black text-slate-800 tracking-tight">
+                        {getGreeting()}, {user?.name || "Staff"}
+                      </h1>
+                      <p className="text-sm font-semibold text-slate-500 mt-1">
+                        Give your best services for customers 😊
+                      </p>
+                    </div>
+                    <div className="text-right bg-white/30 backdrop-blur-md border border-white/40 px-6 py-2.5 rounded-2xl shadow-inner">
+                      <p className="text-3xl font-mono font-black tracking-wide text-slate-800">
+                        {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+                      </p>
+                      <p className="text-[10px] font-black uppercase text-slate-400 mt-0.5 tracking-wider">
+                        {formattedDate}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <StatCard title="Total Earnings" value={`₹${stats.totalEarnings.toFixed(2)}`} change={stats.earningsChange || "vs Yesterday"} icon={<CurrencyDollarIcon className="h-6 w-6" />} iconBgColor="bg-green-500" />
                     <StatCard title="In Progress" value={stats.inProgress} change={stats.inProgressChange || "vs Yesterday"} icon={<ClockIcon className="h-6 w-6" />} iconBgColor="bg-yellow-500" />
@@ -977,12 +981,13 @@ const StaffDashboard = () => {
                   <RecentOrders orders={recentOrders} onOrderClick={setSelectedOrder} />
                 </div>
 
+                {/* Right 1/3 Column */}
                 <div className="lg:col-span-1">
                   <PopularDishes dishes={popularDishes} />
                 </div>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
 
