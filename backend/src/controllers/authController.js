@@ -151,13 +151,31 @@ export const logout = (req, res) => {
 // Google Login/Register Handler
 export const googleLogin = async (req, res) => {
   try {
-    const { name, email, googleId } = req.body;
+    let { name, email, googleId, credential } = req.body;
+
+    if (credential) {
+      // Validate dynamic token with Google's secure APIs
+      try {
+        const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+        if (!verifyRes.ok) {
+          return res.status(400).json({ message: "Google Authentication Token is invalid or has expired." });
+        }
+        const payload = await verifyRes.json();
+        email = payload.email;
+        name = payload.name || payload.given_name || email.split("@")[0];
+        googleId = payload.sub;
+      } catch (err) {
+        console.error("🔥 Cryptographic verification failed for Google token:", err);
+        return res.status(400).json({ message: "Failed to securely verify Google token with Google servers." });
+      }
+    }
 
     if (!email) {
       return res.status(400).json({ message: "Email is required for Google Sign-in" });
     }
 
     let user = await User.findOne({ email });
+
 
     if (!user) {
       // Auto-register a new customer user

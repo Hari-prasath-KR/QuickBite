@@ -1,10 +1,48 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 
 const GoogleAuthModal = ({ isOpen, onClose, onSelect }) => {
-  const [useCustom, setUseCustom] = useState(false);
+  const [showSandbox, setShowSandbox] = useState(false);
   const [customName, setCustomName] = useState("");
   const [customEmail, setCustomEmail] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (isOpen && window.google) {
+      try {
+        const clientID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "1038283594025-mbf76t3tkgjcf710h3d4f1s8ltdge0t0.apps.googleusercontent.com";
+        
+        window.google.accounts.id.initialize({
+          client_id: clientID,
+          callback: (response) => {
+            if (response.credential) {
+              onSelect({ credential: response.credential });
+            } else {
+              toast.error("Google authentication failed. Please try again.");
+            }
+          },
+          auto_select: false
+        });
+
+        // Render the official native Google button
+        window.google.accounts.id.renderButton(
+          document.getElementById("real-google-btn-container"),
+          { 
+            theme: "filled_blue", 
+            size: "large", 
+            width: "320", 
+            text: "continue_with",
+            shape: "pill"
+          }
+        );
+
+        // Optional One Tap prompt
+        window.google.accounts.id.prompt();
+      } catch (err) {
+        console.error("Google Client SDK initialization error:", err);
+      }
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -65,7 +103,7 @@ const GoogleAuthModal = ({ isOpen, onClose, onSelect }) => {
             />
           </svg>
           <h2 className="text-xl font-semibold mt-4 text-gray-800">
-            {useCustom ? "Sign in with Google" : "Choose an account"}
+            Sign in with Google
           </h2>
           <p className="text-sm text-gray-500 mt-1">
             to continue to <span className="font-semibold text-green-500">QuickBite 🍔</span>
@@ -73,105 +111,91 @@ const GoogleAuthModal = ({ isOpen, onClose, onSelect }) => {
         </div>
 
         {/* Modal Content */}
-        <div className="px-8 pb-8">
-          {!useCustom ? (
-            <div className="space-y-3">
-              {mockAccounts.map((account, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSelectAccount(account)}
-                  className="w-full flex items-center p-3 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <div className={`w-9 h-9 rounded-full ${account.bg} flex items-center justify-center text-white font-bold text-sm shadow-sm mr-3`}>
-                    {account.avatar}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-700">{account.name}</p>
-                    <p className="text-xs text-gray-400">{account.email}</p>
-                  </div>
-                  <div className="text-gray-300">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-              ))}
+        <div className="px-8 pb-8 flex flex-col items-center">
+          
+          {/* NATIVE GOOGLE IDENTITY SIGN-IN BUTTON CONTAINER */}
+          <div className="w-full flex flex-col items-center py-4">
+            <div id="real-google-btn-container" className="my-2 min-h-[46px] flex items-center justify-center"></div>
+            <p className="text-[10px] text-gray-400 font-semibold mt-2 text-center">
+              Uses official Google authentication popups securely.
+            </p>
+          </div>
 
-              <button
-                onClick={() => {
-                  setUseCustom(true);
-                  setError("");
-                }}
-                className="w-full flex items-center p-3 rounded-xl border border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-sm mr-3">
-                  +
+          {/* ADVANCED DEVELOPER SANDBOX CHOOSER */}
+          <div className="w-full border-t border-gray-150/60 pt-4 mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setShowSandbox(!showSandbox);
+                setError("");
+              }}
+              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-[10px] font-black tracking-wider uppercase text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-xl transition duration-200"
+            >
+              <span>🛠️</span> {showSandbox ? "Hide Developer Sandbox" : "Show Developer Sandbox"}
+            </button>
+
+            {showSandbox && (
+              <div className="mt-4 space-y-3 animate-fade-in text-left">
+                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-2 text-center">
+                  Mock profiles for local Sandbox sandbox testing
+                </p>
+
+                {mockAccounts.map((account, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSelectAccount(account)}
+                    className="w-full flex items-center p-2.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 text-left focus:outline-none"
+                  >
+                    <div className={`w-8 h-8 rounded-full ${account.bg} flex items-center justify-center text-white font-bold text-xs shadow-sm mr-2.5`}>
+                      {account.avatar}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-700 truncate">{account.name}</p>
+                      <p className="text-[10px] text-gray-400 truncate">{account.email}</p>
+                    </div>
+                  </button>
+                ))}
+
+                {/* Custom Mock Sandbox Entry */}
+                <div className="border-t border-dashed border-gray-200 pt-3 mt-3">
+                  <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-2">
+                    Simulate Custom Test Profile
+                  </p>
+                  <form onSubmit={handleCustomSubmit} className="space-y-2.5">
+                    {error && <p className="text-red-500 text-[10px] text-center font-bold">{error}</p>}
+                    <input
+                      type="text"
+                      placeholder="Custom Profile Name"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                    />
+                    <input
+                      type="email"
+                      placeholder="custom@example.com"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                      value={customEmail}
+                      onChange={(e) => setCustomEmail(e.target.value)}
+                    />
+                    <button
+                      type="submit"
+                      className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition shadow"
+                    >
+                      Inject Custom Profile
+                    </button>
+                  </form>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-600">Use another account</p>
-                  <p className="text-xs text-gray-400">Sign in with a new Google test email</p>
-                </div>
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleCustomSubmit} className="space-y-4">
-              {error && <p className="text-red-500 text-xs text-center">{error}</p>}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Jane Doe"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  required
-                />
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Google Email Address
-                </label>
-                <input
-                  type="email"
-                  placeholder="e.g. yourname@gmail.com"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  value={customEmail}
-                  onChange={(e) => setCustomEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUseCustom(false);
-                    setError("");
-                  }}
-                  className="w-1/2 py-3 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded-xl font-medium text-sm transition-all duration-200"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  className="w-1/2 py-3 bg-[#4285F4] hover:bg-[#357ae8] text-white rounded-xl font-medium text-sm transition-all duration-200 shadow-md"
-                >
-                  Sign In
-                </button>
-              </div>
-            </form>
-          )}
+            )}
+          </div>
 
           {/* Close / Cancel Button */}
-          <div className="flex justify-center mt-6">
+          <div className="flex justify-center mt-5">
             <button
               onClick={onClose}
               className="text-xs text-gray-400 hover:text-gray-600 font-medium tracking-wide focus:outline-none hover:underline"
             >
-              Cancel
+              Cancel & Close
             </button>
           </div>
         </div>
