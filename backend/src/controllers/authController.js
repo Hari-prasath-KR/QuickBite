@@ -69,10 +69,11 @@ export const login = async (req, res) => {
     const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
       expiresIn: "7d",
     });
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("JWT_TOKEN_QUICKBITE", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      httpOnly: true, // secure, not accessible by JS
+      secure: isProd, // true in production
+      sameSite: isProd ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
     res.json({ token, role: user.role, userId: user._id, name: user.name });
@@ -127,13 +128,14 @@ export const getProfile = async (req, res) => {
 
 export const logout = (req, res) => {
   try {
+    const isProd = process.env.NODE_ENV === "production";
     // Must match the name and options used in login
     res.clearCookie("JWT_TOKEN_QUICKBITE", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    path: "/",
-  });
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      path: "/", // include path to be safe
+    });
     res.status(200).json({
       success: true,
       message: "Logout Successful...",
@@ -203,10 +205,11 @@ export const googleLogin = async (req, res) => {
       expiresIn: "7d",
     });
 
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("JWT_TOKEN_QUICKBITE", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
 
