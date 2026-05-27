@@ -32,19 +32,19 @@ connectDB(process.env.MONGO_URI_ATLAS)
 const app=express();
 app.use(express.json());
 app.use(cookieParser())
-const allowedOrigins = [
-  "http://localhost:5173",
-  process.env.FRONTEND_URL
-];
+// const allowedOrigins = [
+//   "http://localhost:5173",
+//   process.env.FRONTEND_URL
+// ];
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: true,
   credentials: true
 }));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: true,
     credentials: true
   }
 });
@@ -83,11 +83,11 @@ app.use("/api/search", searchRoutes);
 //   res.json({ message: 'API is working!' });
 // });
 
-app.listen(PORT,() => console.log("Server Listening to port:",PORT));
+server.listen(PORT,() => console.log("Server Listening to port:",PORT));
 
 
 // connectDB().then(()=>{
-//     app.listen(PORT,() => {
+//     server.listen(PORT,() => {
 //     console.log("Server Listening to port:",PORT);
 //   });
 // });
